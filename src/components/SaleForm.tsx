@@ -1,0 +1,218 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { PlusCircle } from 'lucide-react'
+
+interface Product {
+  id: string
+  name: string
+  unit_label: string
+  unit_price: number
+}
+
+interface Props {
+  userId: string
+  onSaleAdded: () => void
+}
+
+export default function SaleForm({ userId, onSaleAdded }: Props) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [productId, setProductId] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [unitPrice, setUnitPrice] = useState('')
+  const [unitLabel, setUnitLabel] = useState('')
+  const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0])
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [priceEdited, setPriceEdited] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('name')
+      .then(({ data }) => { if (data) setProducts(data) })
+  }, [])
+
+  const total = Number(quantity) * Number(unitPrice) || 0
+
+  const handleProductSelect = (id: string) => {
+    setProductId(id)
+    setPriceEdited(false)
+    const product = products.find(p => p.id === id)
+    if (product) {
+      setUnitPrice(String(product.unit_price))
+      setUnitLabel(product.unit_label)
+    } else {
+      setUnitPrice('')
+      setUnitLabel('')
+    }
+  }
+
+  const selectedProduct = products.find(p => p.id === productId)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProduct) return
+    setLoading(true)
+
+    const { error } = await supabase.from('sales').insert({
+      user_id: userId,
+      product_id: productId,
+      item_name: selectedProduct.name,
+      unit_label: unitLabel,
+      quantity: Number(quantity),
+      unit_price: Number(unitPrice),
+      sale_date: saleDate,
+      notes: notes || null,
+    })
+
+    setLoading(false)
+    if (!error) {
+      setProductId('')
+      setQuantity('')
+      setUnitPrice('')
+      setUnitLabel('')
+      setNotes('')
+      setPriceEdited(false)
+      setSaleDate(new Date().toISOString().split('T')[0])
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 2500)
+      onSaleAdded()
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
+      <h2 className="font-bold text-amber-900 text-lg mb-4 flex items-center gap-2">
+        <PlusCircle size={20} className="text-amber-600" />
+        Record a Sale
+      </h2>
+
+      {products.length === 0 ? (
+        <div className="text-center py-8 text-amber-400 text-sm">
+          No products set up yet. Ask the admin to add products first.
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Product Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+            <select
+              value={productId}
+              onChange={e => handleProductSelect(e.target.value)}
+              required
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              <option value="">Select a product...</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — ₦{Number(p.unit_price).toLocaleString('en-NG')} / {p.unit_label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Quantity {unitLabel && <span className="text-amber-500">({unitLabel}s)</span>}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={quantity}
+                onChange={e => setQuantity(e.target.value)}
+                required
+                placeholder="0"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+
+            {/* Unit Price — pre-filled, editable */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Unit Price (₦)
+                {priceEdited && (
+                  <span className="text-xs text-orange-400 ml-1">· edited</span>
+                )}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={unitPrice}
+                onChange={e => { setUnitPrice(e.target.value); setPriceEdited(true) }}
+                required
+                placeholder="0.00"
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                  priceEdited ? 'border-orange-300 bg-orange-50' : 'border-gray-200'
+                }`}
+              />
+              {priceEdited && selectedProduct && (
+                <button
+                  type="button"
+                  onClick={() => { setUnitPrice(String(selectedProduct.unit_price)); setPriceEdited(false) }}
+                  className="text-xs text-amber-500 hover:text-amber-700 mt-1"
+                >
+                  Reset to ₦{Number(selectedProduct.unit_price).toLocaleString('en-NG')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={saleDate}
+                onChange={e => setSaleDate(e.target.value)}
+                required
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+
+            {/* Total */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+              <div className="w-full border border-amber-200 bg-amber-50 rounded-lg px-3 py-2.5 text-sm font-semibold text-amber-800">
+                ₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="e.g. Cash payment, customer name..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
+              ✅ Sale recorded!
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
+          >
+            {loading ? 'Saving...' : 'Save Sale'}
+          </button>
+        </form>
+      )}
+    </div>
+  )
+}
