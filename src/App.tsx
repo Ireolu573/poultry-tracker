@@ -3,12 +3,11 @@ import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import SaleForm from './components/SaleForm'
 import SalesTable from './components/SalesTable'
-import Analytics from './components/Analytics'
 import AdminPage from './components/AdminPage'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, ShieldCheck } from 'lucide-react'
 
-type Tab = 'record' | 'history' | 'analytics' | 'admin'
+type Tab = 'record' | 'history' | 'admin'
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -56,11 +55,11 @@ export default function App() {
   if (!user) return <Auth />
 
   const allTabs: { id: Tab; label: string; emoji: string; adminOnly?: boolean }[] = [
-    { id: 'record',    label: 'Record',    emoji: '📝' },
-    { id: 'history',   label: 'History',   emoji: '🗂️' },
-    { id: 'analytics', label: 'Analytics', emoji: '📊' },
-    { id: 'admin',     label: 'Admin',     emoji: '🛡️', adminOnly: true },
-  ]`n  const tabs = allTabs.filter(t => !t.adminOnly || isAdmin)
+    { id: 'record',  label: 'Record',  emoji: '📝' },
+    { id: 'history', label: 'History', emoji: '🗂️' },
+    { id: 'admin',   label: 'Admin',   emoji: '🛡️', adminOnly: true },
+  ]
+  const tabs = allTabs.filter(t => !t.adminOnly || isAdmin)
 
   return (
     <div className="min-h-screen bg-amber-50">
@@ -113,12 +112,7 @@ export default function App() {
         {tab === 'history' && (
           <SalesTable userId={user.id} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />
         )}
-        {tab === 'analytics' && (
-          <Analytics userId={user.id} refreshKey={refreshKey} />
-        )}
-        {tab === 'admin' && isAdmin && (
-          <AdminPage />
-        )}
+        {tab === 'admin' && isAdmin && <AdminPage />}
       </main>
     </div>
   )
