@@ -55,12 +55,12 @@ export default function App() {
 
   if (!user) return <Auth />
 
-  const tabs: { id: Tab; label: string; emoji: string; adminOnly?: boolean }[] = [
+  const allTabs: { id: Tab; label: string; emoji: string; adminOnly?: boolean }[] = [
     { id: 'record',    label: 'Record',    emoji: '📝' },
     { id: 'history',   label: 'History',   emoji: '🗂️' },
     { id: 'analytics', label: 'Analytics', emoji: '📊' },
     { id: 'admin',     label: 'Admin',     emoji: '🛡️', adminOnly: true },
-  ].filter(t => !t.adminOnly || isAdmin)
+  ]`n  const tabs = allTabs.filter(t => !t.adminOnly || isAdmin)
 
   return (
     <div className="min-h-screen bg-amber-50">
