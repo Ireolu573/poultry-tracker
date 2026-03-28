@@ -6,10 +6,11 @@ import SalesTable from './components/SalesTable'
 import StockForm from './components/StockForm'
 import CreditManager from './components/CreditManager'
 import AdminPage from './components/AdminPage'
+import Analytics from './components/Analytics'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, ShieldCheck } from 'lucide-react'
 
-type Tab = 'record' | 'history' | 'stock' | 'credit' | 'admin'
+type Tab = 'record' | 'history' | 'stock' | 'credit' | 'analytics' | 'admin'
 
 type TabDef = { id: Tab; label: string; emoji: string; adminOnly?: boolean }
 
@@ -59,11 +60,12 @@ export default function App() {
   if (!user) return <Auth />
 
   const allTabs: TabDef[] = [
-    { id: 'record',  label: 'Record',  emoji: '📝' },
-    { id: 'history', label: 'History', emoji: '🗂️' },
-    { id: 'stock',   label: 'Stock',   emoji: '📦' },
-    { id: 'credit',  label: 'Credit',  emoji: '📋' },
-    { id: 'admin',   label: 'Admin',   emoji: '🛡️', adminOnly: true },
+    { id: 'record',    label: 'Record',    emoji: '📝' },
+    { id: 'history',   label: 'History',   emoji: '🗂️' },
+    { id: 'stock',     label: 'Stock',     emoji: '📦' },
+    { id: 'credit',    label: 'Credit',    emoji: '📋' },
+    { id: 'analytics', label: 'Analytics', emoji: '📊' },
+    { id: 'admin',     label: 'Admin',     emoji: '🛡️', adminOnly: true },
   ]
   const tabs = allTabs.filter((t: TabDef) => !t.adminOnly || isAdmin)
 
@@ -122,6 +124,7 @@ export default function App() {
         )}
         {tab === 'stock' && <StockForm userId={user.id} />}
         {tab === 'credit' && <CreditManager isAdmin={isAdmin} userId={user.id} />}
+        {tab === 'analytics' && <Analytics userId={user.id} refreshKey={refreshKey} />}
         {tab === 'admin' && isAdmin && <AdminPage />}
       </main>
     </div>
