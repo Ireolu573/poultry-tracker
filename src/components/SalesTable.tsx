@@ -27,6 +27,7 @@ const paymentBadge = (method: string, paidVia?: string | null) => {
   if (method === 'credit' && !paidVia) return <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">Credit</span>
   if (method === 'credit' && paidVia) return <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">Settled</span>
   if (method === 'transfer') return <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Transfer</span>
+  if (method === 'pos') return <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">POS</span>
   return <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Cash</span>
 }
 

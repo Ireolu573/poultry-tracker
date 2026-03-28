@@ -77,6 +77,7 @@ export default function Analytics({ userId, refreshKey }: Props) {
   // Payment breakdown
   const cashRevenue = monthSales.filter(s => s.payment_method === 'cash').reduce((sum, s) => sum + Number(s.total_amount), 0)
   const transferRevenue = monthSales.filter(s => s.payment_method === 'transfer').reduce((sum, s) => sum + Number(s.total_amount), 0)
+  const posRevenue = monthSales.filter(s => s.payment_method === 'pos').reduce((sum, s) => sum + Number(s.total_amount), 0)
   const creditRevenue = monthSales.filter(s => s.payment_method === 'credit').reduce((sum, s) => sum + Number(s.total_amount), 0)
   const settledCredit = monthSales.filter(s => s.payment_method === 'credit' && s.paid_at).reduce((sum, s) => sum + Number(s.total_amount), 0)
   const outstandingCredit = creditRevenue - settledCredit
@@ -84,6 +85,7 @@ export default function Analytics({ userId, refreshKey }: Props) {
   const paymentPieData = [
     { name: 'Cash', value: cashRevenue, color: '#22c55e' },
     { name: 'Transfer', value: transferRevenue, color: '#3b82f6' },
+    { name: 'POS', value: posRevenue, color: '#a855f7' },
     { name: 'Credit', value: creditRevenue, color: '#f97316' },
   ].filter(d => d.value > 0)
 
@@ -225,12 +227,13 @@ export default function Analytics({ userId, refreshKey }: Props) {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2 mt-2">
             {[
               { label: '💵 Cash', value: cashRevenue, color: 'text-green-700 bg-green-50' },
               { label: '🏦 Transfer', value: transferRevenue, color: 'text-blue-700 bg-blue-50' },
+              { label: '💳 POS', value: posRevenue, color: 'text-purple-700 bg-purple-50' },
               { label: '📋 Credit', value: creditRevenue, color: 'text-orange-700 bg-orange-50' },
-            ].map(item => (
+            ].filter(item => item.value > 0).map(item => (
               <div key={item.label} className={`rounded-xl p-3 ${item.color}`}>
                 <div className="text-xs font-medium mb-1">{item.label}</div>
                 <div className="text-sm font-bold">₦{item.value.toLocaleString('en-NG')}</div>

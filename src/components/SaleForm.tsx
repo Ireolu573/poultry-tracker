@@ -19,7 +19,7 @@ interface Props {
   onSaleAdded: () => void
 }
 
-type PaymentMethod = 'cash' | 'transfer' | 'credit'
+type PaymentMethod = 'cash' | 'transfer' | 'credit' | 'pos'
 
 export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [products, setProducts] = useState<Product[]>([])
@@ -100,6 +100,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   const paymentOptions: { value: PaymentMethod; label: string; color: string }[] = [
     { value: 'cash',     label: '💵 Cash',     color: 'bg-green-500' },
     { value: 'transfer', label: '🏦 Transfer', color: 'bg-blue-500' },
+    { value: 'pos',      label: '💳 POS',      color: 'bg-purple-500' },
     { value: 'credit',   label: '📋 Credit',   color: 'bg-orange-500' },
   ]
 
