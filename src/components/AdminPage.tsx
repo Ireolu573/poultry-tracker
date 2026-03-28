@@ -15,7 +15,7 @@ interface Product {
   product_units: ProductUnit[]
 }
 
-const UNIT_OPTIONS = ['bag', 'kg', 'paint', 'sachet', 'bird', 'pack', 'crate', 'bottle', 'litre', 'unit']
+const UNIT_OPTIONS = ['bag', 'kg', 'paint', 'sachet', 'small', 'medium', 'large', 'big', 'bird', 'pack', 'crate', 'bottle', 'litre', 'unit']
 
 const emptyUnitRow = () => ({ unit_label: 'bag', unit_price: '' })
 
