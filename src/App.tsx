@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
-import SaleForm from './components/SaleForm'
-import SalesTable from './components/SalesTable'
-import StockForm from './components/StockForm'
-import CreditManager from './components/CreditManager'
-import AdminPage from './components/AdminPage'
-import Analytics from './components/Analytics'
 import type { User } from '@supabase/supabase-js'
 import { LogOut, ShieldCheck } from 'lucide-react'
+
+const SaleForm     = lazy(() => import('./components/SaleForm'))
+const SalesTable   = lazy(() => import('./components/SalesTable'))
+const StockForm    = lazy(() => import('./components/StockForm'))
+const CreditManager = lazy(() => import('./components/CreditManager'))
+const AdminPage    = lazy(() => import('./components/AdminPage'))
+const Analytics    = lazy(() => import('./components/Analytics'))
 
 type Tab = 'record' | 'history' | 'stock' | 'credit' | 'analytics' | 'admin'
 
@@ -111,21 +112,23 @@ export default function App() {
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-4 pb-10">
-        {tab === 'record' && (
-          <SaleForm userId={user.id} onSaleAdded={() => setRefreshKey(k => k + 1)} />
-        )}
-        {tab === 'history' && (
-          <SalesTable
-            userId={user.id}
-            isAdmin={isAdmin}
-            refreshKey={refreshKey}
-            onDelete={() => setRefreshKey(k => k + 1)}
-          />
-        )}
-        {tab === 'stock' && <StockForm userId={user.id} />}
-        {tab === 'credit' && <CreditManager isAdmin={isAdmin} userId={user.id} />}
-        {tab === 'analytics' && <Analytics userId={user.id} refreshKey={refreshKey} />}
-        {tab === 'admin' && isAdmin && <AdminPage />}
+        <Suspense fallback={<div className="text-center text-amber-400 py-10 text-sm">Loading...</div>}>
+          {tab === 'record' && (
+            <SaleForm userId={user.id} onSaleAdded={() => setRefreshKey(k => k + 1)} />
+          )}
+          {tab === 'history' && (
+            <SalesTable
+              userId={user.id}
+              isAdmin={isAdmin}
+              refreshKey={refreshKey}
+              onDelete={() => setRefreshKey(k => k + 1)}
+            />
+          )}
+          {tab === 'stock' && <StockForm userId={user.id} />}
+          {tab === 'credit' && <CreditManager isAdmin={isAdmin} userId={user.id} />}
+          {tab === 'analytics' && <Analytics userId={user.id} refreshKey={refreshKey} />}
+          {tab === 'admin' && isAdmin && <AdminPage />}
+        </Suspense>
       </main>
     </div>
   )
