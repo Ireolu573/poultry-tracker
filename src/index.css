@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force light mode regardless of device dark mode setting */
+:root {
+  color-scheme: light;
+}
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
+  background-color: #fffbeb;
+  color: #1c1917;
+}
+
+/* Hide scrollbar for tab bar on mobile */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

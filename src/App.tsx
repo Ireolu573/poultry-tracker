@@ -94,12 +94,12 @@ export default function App() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 pt-4">
-        <div className="flex bg-white rounded-xl border border-amber-100 p-1 shadow-sm">
+        <div className="flex bg-white rounded-xl border border-amber-100 p-1 shadow-sm overflow-x-auto scrollbar-hide">
           {tabs.map((t: TabDef) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 py-2 px-1 text-xs font-medium rounded-lg transition-all whitespace-nowrap ${
+              className={`flex-shrink-0 py-2 px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap ${
                 tab === t.id
                   ? 'bg-amber-600 text-white shadow-sm'
                   : 'text-amber-700 hover:bg-amber-50'
