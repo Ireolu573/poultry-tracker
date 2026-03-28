@@ -14,6 +14,8 @@ interface Props {
   onSaleAdded: () => void
 }
 
+type PaymentMethod = 'cash' | 'transfer' | 'credit'
+
 export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [productId, setProductId] = useState('')
@@ -21,6 +23,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [unitPrice, setUnitPrice] = useState('')
   const [unitLabel, setUnitLabel] = useState('')
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
+  const [customerName, setCustomerName] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -36,6 +40,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   }, [])
 
   const total = Number(quantity) * Number(unitPrice) || 0
+  const selectedProduct = products.find(p => p.id === productId)
 
   const handleProductSelect = (id: string) => {
     setProductId(id)
@@ -50,8 +55,6 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
     }
   }
 
-  const selectedProduct = products.find(p => p.id === productId)
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedProduct) return
@@ -65,6 +68,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       quantity: Number(quantity),
       unit_price: Number(unitPrice),
       sale_date: saleDate,
+      payment_method: paymentMethod,
+      customer_name: customerName || null,
       notes: notes || null,
     })
 
@@ -74,14 +79,22 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       setQuantity('')
       setUnitPrice('')
       setUnitLabel('')
+      setCustomerName('')
       setNotes('')
       setPriceEdited(false)
+      setPaymentMethod('cash')
       setSaleDate(new Date().toISOString().split('T')[0])
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2500)
       onSaleAdded()
     }
   }
+
+  const paymentOptions: { value: PaymentMethod; label: string; color: string }[] = [
+    { value: 'cash',     label: '💵 Cash',     color: 'bg-green-500' },
+    { value: 'transfer', label: '🏦 Transfer', color: 'bg-blue-500' },
+    { value: 'credit',   label: '📋 Credit',   color: 'bg-orange-500' },
+  ]
 
   return (
     <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
@@ -96,7 +109,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Product Select */}
+          {/* Product */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
             <select
@@ -121,43 +134,30 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
                 Quantity {unitLabel && <span className="text-amber-500">({unitLabel}s)</span>}
               </label>
               <input
-                type="number"
-                min="0"
-                step="any"
+                type="number" min="0" step="any"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
-                required
-                placeholder="0"
+                required placeholder="0"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
 
-            {/* Unit Price — pre-filled, editable */}
+            {/* Unit Price */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Unit Price (₦)
-                {priceEdited && (
-                  <span className="text-xs text-orange-400 ml-1">· edited</span>
-                )}
+                Unit Price (₦) {priceEdited && <span className="text-xs text-orange-400">· edited</span>}
               </label>
               <input
-                type="number"
-                min="0"
-                step="any"
+                type="number" min="0" step="any"
                 value={unitPrice}
                 onChange={e => { setUnitPrice(e.target.value); setPriceEdited(true) }}
-                required
-                placeholder="0.00"
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                  priceEdited ? 'border-orange-300 bg-orange-50' : 'border-gray-200'
-                }`}
+                required placeholder="0.00"
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${priceEdited ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}
               />
               {priceEdited && selectedProduct && (
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => { setUnitPrice(String(selectedProduct.unit_price)); setPriceEdited(false) }}
-                  className="text-xs text-amber-500 hover:text-amber-700 mt-1"
-                >
+                  className="text-xs text-amber-500 hover:text-amber-700 mt-1">
                   Reset to ₦{Number(selectedProduct.unit_price).toLocaleString('en-NG')}
                 </button>
               )}
@@ -168,11 +168,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
-                type="date"
-                value={saleDate}
-                onChange={e => setSaleDate(e.target.value)}
-                required
+              <input type="date" value={saleDate}
+                onChange={e => setSaleDate(e.target.value)} required
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -186,14 +183,48 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
             </div>
           </div>
 
+          {/* Payment Method */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+            <div className="flex gap-2">
+              {paymentOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(opt.value)}
+                  className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    paymentMethod === opt.value
+                      ? 'border-transparent text-white ' + opt.color
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Customer Name — always shown for credit, optional for others */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Customer Name {paymentMethod === 'credit' ? <span className="text-red-400">*</span> : <span className="text-gray-400">(optional)</span>}
+            </label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+              required={paymentMethod === 'credit'}
+              placeholder="e.g. Mr. Emeka"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-            <input
-              type="text"
-              value={notes}
+            <input type="text" value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Cash payment, customer name..."
+              placeholder="Any extra info..."
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
@@ -204,11 +235,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
-          >
+          <button type="submit" disabled={loading}
+            className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
             {loading ? 'Saving...' : 'Save Sale'}
           </button>
         </form>
