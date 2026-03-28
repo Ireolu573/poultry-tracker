@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { PackagePlus } from 'lucide-react'
 
+interface ProductUnit {
+  id: string
+  unit_label: string
+}
+
 interface Product {
   id: string
   name: string
-  unit_label: string
+  product_units: ProductUnit[]
 }
 
 interface StockRecord {
@@ -26,6 +31,7 @@ export default function StockForm({ userId }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [records, setRecords] = useState<StockRecord[]>([])
   const [productId, setProductId] = useState('')
+  const [selectedUnitLabel, setSelectedUnitLabel] = useState('')
   const [quantity, setQuantity] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [stockDate, setStockDate] = useState(new Date().toISOString().split('T')[0])
@@ -44,17 +50,21 @@ export default function StockForm({ userId }: Props) {
   }
 
   useEffect(() => {
-    supabase.from('products').select('*').eq('is_active', true).order('name')
-      .then(({ data }) => { if (data) setProducts(data) })
+    supabase.from('products').select('id, name, product_units(id, unit_label)').eq('is_active', true).order('name')
+      .then(({ data }) => { if (data) setProducts(data as Product[]) })
     fetchRecords()
   }, [])
 
   const selectedProduct = products.find(p => p.id === productId)
-  const total = Number(quantity) * Number(costPrice) || 0
+
+  const handleProductSelect = (id: string) => {
+    setProductId(id)
+    setSelectedUnitLabel('')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedProduct) return
+    if (!selectedProduct || !selectedUnitLabel) return
     setLoading(true)
 
     const { error } = await supabase.from('stock_records').insert({
@@ -70,6 +80,7 @@ export default function StockForm({ userId }: Props) {
     setLoading(false)
     if (!error) {
       setProductId('')
+      setSelectedUnitLabel('')
       setQuantity('')
       setCostPrice('')
       setNotes('')
@@ -79,6 +90,8 @@ export default function StockForm({ userId }: Props) {
       fetchRecords()
     }
   }
+
+  const total = Number(quantity) * Number(costPrice) || 0
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this stock record?')) return
@@ -98,19 +111,38 @@ export default function StockForm({ userId }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-            <select value={productId} onChange={e => setProductId(e.target.value)} required
+            <select value={productId} onChange={e => handleProductSelect(e.target.value)} required
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option value="">Select a product...</option>
               {products.map(p => (
-                <option key={p.id} value={p.id}>{p.name} (per {p.unit_label})</option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </div>
 
+          {selectedProduct && selectedProduct.product_units.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+              <div className="flex flex-wrap gap-2">
+                {selectedProduct.product_units.map(u => (
+                  <button key={u.id} type="button"
+                    onClick={() => setSelectedUnitLabel(u.unit_label)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                      selectedUnitLabel === u.unit_label
+                        ? 'bg-blue-600 text-white border-transparent'
+                        : 'border-gray-200 text-gray-600 hover:bg-blue-50'
+                    }`}>
+                    {u.unit_label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Quantity {selectedProduct && <span className="text-amber-500">({selectedProduct.unit_label}s)</span>}
+                Quantity {selectedUnitLabel && <span className="text-blue-500">({selectedUnitLabel}s)</span>}
               </label>
               <input type="number" min="0" step="any" value={quantity}
                 onChange={e => setQuantity(e.target.value)} required placeholder="0"
