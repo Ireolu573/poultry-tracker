@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Force light mode regardless of device dark mode setting */
 :root {
   color-scheme: light;
 }
@@ -13,11 +12,56 @@ body {
   color: #1c1917;
 }
 
-/* Hide scrollbar for tab bar on mobile */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* ── Animations ─────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.95); }
+  60%  { transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.fade-in {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease forwards;
+}
+
+.slide-in {
+  animation: slideIn 0.25s ease forwards;
+}
+
+.pop-in {
+  animation: popIn 0.3s ease forwards;
+}
+
+/* Staggered list items */
+.stagger > *:nth-child(1) { animation: slideUp 0.25s ease 0.00s both; }
+.stagger > *:nth-child(2) { animation: slideUp 0.25s ease 0.05s both; }
+.stagger > *:nth-child(3) { animation: slideUp 0.25s ease 0.10s both; }
+.stagger > *:nth-child(4) { animation: slideUp 0.25s ease 0.15s both; }
+.stagger > *:nth-child(5) { animation: slideUp 0.25s ease 0.20s both; }
+.stagger > *:nth-child(6) { animation: slideUp 0.25s ease 0.25s both; }
+
+/* Hide scrollbar */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Button press feel */
+button:active { transform: scale(0.97); }

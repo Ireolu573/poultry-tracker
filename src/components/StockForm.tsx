@@ -25,9 +25,10 @@ interface StockRecord {
 
 interface Props {
   userId: string
+  isAdmin: boolean
 }
 
-export default function StockForm({ userId }: Props) {
+export default function StockForm({ userId, isAdmin }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [records, setRecords] = useState<StockRecord[]>([])
   const [productId, setProductId] = useState('')
