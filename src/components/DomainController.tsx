@@ -132,15 +132,34 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault(); setCreatingUser(true); setUserError(''); setUserSuccess('')
     try {
-      const tempClient = createClient(supabaseUrl, supabaseAnonKey)
-      const { data, error } = await tempClient.auth.signUp({ email: newEmail.trim(), password: newPassword })
+      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+      })
+      const { data, error } = await tempClient.auth.signUp({
+        email: newEmail.trim(),
+        password: newPassword,
+        options: { emailRedirectTo: undefined }
+      })
       if (error) { setUserError(error.message); setCreatingUser(false); return }
-      if (data.user) {
-        await supabase.from('profiles').upsert({ id: data.user.id, email: newEmail.trim(), is_admin: false, permissions: DEFAULT_PERMISSIONS })
-        setUserSuccess(`Account created for ${newEmail}`)
-        setNewEmail(''); setNewPassword(''); fetchUsers()
+
+      // data.user exists whether email is confirmed or not
+      const userId = data.user?.id ?? data.session?.user?.id
+      if (userId) {
+        // Wait briefly for the profile trigger to fire
+        await new Promise(r => setTimeout(r, 800))
+        await supabase.from('profiles').upsert({
+          id: userId,
+          email: newEmail.trim(),
+          is_admin: false,
+          permissions: DEFAULT_PERMISSIONS
+        })
+        setUserSuccess(`✅ Account created for ${newEmail.trim()}. They can now log in.`)
+        setNewEmail(''); setNewPassword('')
+        fetchUsers()
+      } else {
+        setUserError('Could not create account. Make sure email confirmation is disabled in Supabase Auth settings.')
       }
-    } catch { setUserError('Failed to create user.') }
+    } catch { setUserError('Failed to create user. Check your connection.') }
     setCreatingUser(false)
   }
 
