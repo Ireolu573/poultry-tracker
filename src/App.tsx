@@ -3,7 +3,7 @@ import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import DomainController from './components/DomainController'
 import type { User } from '@supabase/supabase-js'
-import { Settings, Wifi, WifiOff } from 'lucide-react'
+import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
 
 const SaleForm      = lazy(() => import('./components/SaleForm'))
 const SalesTable    = lazy(() => import('./components/SalesTable'))
@@ -152,6 +152,13 @@ export default function App() {
                 <Settings size={16} />
               </button>
             )}
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all active:scale-90"
+              title="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </header>

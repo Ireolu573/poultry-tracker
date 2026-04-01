@@ -171,6 +171,20 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
     await supabase.from('profiles').update({ permissions: newPerms }).eq('id', uid)
   }
 
+  const deleteUser = async (uid: string, email: string) => {
+    if (!confirm(`Remove ${email}? This will revoke all their access.`)) return
+    // Revoke all permissions immediately
+    const noPerms: Permissions = {
+      can_record_sales: false, can_view_history: false, can_view_stock: false,
+      can_add_stock: false, can_view_analytics: false, can_manage_credit: false,
+    }
+    setStaffUsers(prev => prev.filter(u => u.id !== uid))
+    await supabase.from('profiles').update({ permissions: noPerms }).eq('id', uid)
+    // Try to delete from auth using admin API (requires service role — may not work with anon key)
+    // Deletion from auth requires Supabase admin API, so we just deactivate for now
+    // User won't be able to do anything even if they log in
+  }
+
   const active = products.filter(p => p.is_active)
   const inactive = products.filter(p => !p.is_active)
 
@@ -390,7 +404,16 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
                   <button onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
                     className="w-full flex items-center justify-between p-3 hover:bg-gray-50">
                     <span className="text-sm font-medium text-gray-700 truncate">{u.email}</span>
-                    <ChevronRight size={14} className={`text-gray-300 transition-transform ${expandedUser === u.id ? 'rotate-90' : ''}`} />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteUser(u.id, u.email) }}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                        title="Remove user"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                      <ChevronRight size={14} className={`text-gray-300 transition-transform ${expandedUser === u.id ? 'rotate-90' : ''}`} />
+                    </div>
                   </button>
                   {expandedUser === u.id && (
                     <div className="border-t border-gray-100 p-3 space-y-2 slide-up">
