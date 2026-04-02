@@ -32,10 +32,14 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
         .select()
         .single()
 
-      if (tenantErr || !tenant) { setError('Failed to create tenant'); setSaving(false); return }
+      if (tenantErr || !tenant) {
+        setError(`Failed to create tenant: ${tenantErr?.message ?? 'unknown error'}`)
+        setSaving(false)
+        return
+      }
 
       // 2. Update profile — set as admin, link to tenant
-      await supabase.from('profiles').upsert({
+      const { error: profileErr } = await supabase.from('profiles').upsert({
         id: userId,
         email: userEmail,
         is_admin: true,
@@ -46,8 +50,14 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
         }
       })
 
+      if (profileErr) {
+        setError(`Failed to update profile: ${profileErr.message}`)
+        setSaving(false)
+        return
+      }
+
       // 3. Create company settings
-      await supabase.from('company_settings').insert({
+      const { error: companyErr } = await supabase.from('company_settings').insert({
         admin_id: userId,
         tenant_id: tenant.id,
         company_name: companyName.trim(),
@@ -56,9 +66,15 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
         logo_emoji: logoEmoji,
       })
 
+      if (companyErr) {
+        setError(`Failed to save company: ${companyErr.message}`)
+        setSaving(false)
+        return
+      }
+
       onComplete()
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (e: unknown) {
+      setError(`Error: ${e instanceof Error ? e.message : 'unknown'}`)
     }
     setSaving(false)
   }
