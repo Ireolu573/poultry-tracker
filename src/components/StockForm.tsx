@@ -31,6 +31,7 @@ interface Props {
 export default function StockForm({ userId, isAdmin }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [records, setRecords] = useState<StockRecord[]>([])
+  const [tenantId, setTenantId] = useState<string | null>(null)
   const [productId, setProductId] = useState('')
   const [selectedUnitLabel, setSelectedUnitLabel] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -51,6 +52,8 @@ export default function StockForm({ userId, isAdmin }: Props) {
   }
 
   useEffect(() => {
+    supabase.from('profiles').select('tenant_id').eq('id', userId).single()
+      .then(({ data }) => { if (data?.tenant_id) setTenantId(data.tenant_id) })
     supabase.from('products').select('id, name, product_units(id, unit_label)').eq('is_active', true).order('name')
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
     fetchRecords()
@@ -70,6 +73,7 @@ export default function StockForm({ userId, isAdmin }: Props) {
 
     const { error } = await supabase.from('stock_records').insert({
       user_id: userId,
+      tenant_id: tenantId,
       product_id: productId,
       item_name: selectedProduct.name,
       quantity: Number(quantity),
