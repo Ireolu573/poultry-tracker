@@ -95,7 +95,7 @@ export default function App() {
       .from('profiles')
       .select('is_admin, permissions, tenant_id')
       .eq('id', u.id)
-      .single()
+      .maybeSingle()
 
     // No profile or no tenant = needs onboarding
     if (!profile || !profile.tenant_id) {

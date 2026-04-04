@@ -25,7 +25,14 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
     setError('')
 
     try {
-      // 1. Create tenant
+      // Step 0 — ensure profile exists first (needed for RLS to work)
+      await supabase.from('profiles').upsert({
+        id: userId,
+        email: userEmail,
+        is_admin: false,
+      })
+
+      // Step 1 — create tenant
       const { data: tenant, error: tenantErr } = await supabase
         .from('tenants')
         .insert({ name: companyName.trim() })
@@ -38,17 +45,15 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
         return
       }
 
-      // 2. Update profile — set as admin, link to tenant
-      const { error: profileErr } = await supabase.from('profiles').upsert({
-        id: userId,
-        email: userEmail,
+      // Step 2 — update profile with tenant + admin rights
+      const { error: profileErr } = await supabase.from('profiles').update({
         is_admin: true,
         tenant_id: tenant.id,
         permissions: {
           can_record_sales: true, can_view_history: true, can_view_stock: true,
           can_add_stock: true, can_view_analytics: true, can_manage_credit: true,
         }
-      })
+      }).eq('id', userId)
 
       if (profileErr) {
         setError(`Failed to update profile: ${profileErr.message}`)
@@ -56,7 +61,7 @@ export default function Onboarding({ userId, userEmail, onComplete }: Props) {
         return
       }
 
-      // 3. Create company settings
+      // Step 3 — create company settings
       const { error: companyErr } = await supabase.from('company_settings').insert({
         admin_id: userId,
         tenant_id: tenant.id,
