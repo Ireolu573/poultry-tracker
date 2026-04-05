@@ -38,12 +38,11 @@ interface Props {
   onClose: () => void
   onCompanyUpdated: (c: CompanySettings) => void
   onProductsChanged: () => void
-  tenantId: string
 }
 
 type Section = 'menu' | 'company' | 'products' | 'users'
 
-export default function DomainController({ userId, company, onClose, onCompanyUpdated, onProductsChanged, tenantId }: Props) {
+export default function DomainController({ userId, company, onClose, onCompanyUpdated, onProductsChanged }: Props) {
   const [section, setSection] = useState<Section>('menu')
   const [companyName, setCompanyName] = useState(company.company_name)
   const [appName, setAppName] = useState(company.app_name)
@@ -88,7 +87,7 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
   const saveCompany = async () => {
     setSavingCompany(true)
     const settings = { company_name: companyName, app_name: appName, brand_color: brandColor, logo_emoji: logoEmoji }
-    await supabase.from('company_settings').upsert({ admin_id: userId, tenant_id: tenantId, ...settings })
+    await supabase.from('company_settings').upsert({ admin_id: userId, ...settings })
     onCompanyUpdated({ admin_id: userId, ...settings })
     setSavingCompany(false)
   }
@@ -112,7 +111,7 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
       await supabase.from('product_units').delete().eq('product_id', editingProductId)
       await supabase.from('product_units').insert(validUnits.map(u => ({ product_id: editingProductId, unit_label: u.unit_label, unit_price: Number(u.unit_price) })))
     } else {
-      const { data: newProd } = await supabase.from('products').insert({ name: productName.trim(), is_active: true, tenant_id: tenantId }).select().single()
+      const { data: newProd } = await supabase.from('products').insert({ name: productName.trim(), is_active: true }).select().single()
       if (newProd) await supabase.from('product_units').insert(validUnits.map(u => ({ product_id: newProd.id, unit_label: u.unit_label, unit_price: Number(u.unit_price) })))
     }
     setSavingProduct(false); setShowProductForm(false)
@@ -152,7 +151,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
           id: userId,
           email: newEmail.trim(),
           is_admin: false,
-          tenant_id: tenantId,
           permissions: DEFAULT_PERMISSIONS
         })
         setUserSuccess(`✅ Account created for ${newEmail.trim()}. They can now log in.`)

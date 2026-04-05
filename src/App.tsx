@@ -1,7 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
-import Onboarding from './components/Onboarding'
 import DomainController from './components/DomainController'
 import type { User } from '@supabase/supabase-js'
 import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
@@ -13,7 +12,6 @@ const CreditManager = lazy(() => import('./components/CreditManager'))
 const Analytics     = lazy(() => import('./components/Analytics'))
 
 type Tab = 'record' | 'history' | 'stock' | 'credit' | 'analytics'
-type AppState = 'loading' | 'auth' | 'onboarding' | 'app'
 
 interface Permissions {
   can_record_sales: boolean; can_view_history: boolean; can_view_stock: boolean
@@ -22,7 +20,7 @@ interface Permissions {
 
 interface CompanySettings {
   admin_id: string; company_name: string; app_name: string
-  brand_color: string; logo_emoji: string; tenant_id?: string
+  brand_color: string; logo_emoji: string
 }
 
 const DEFAULT_PERMS: Permissions = {
@@ -50,8 +48,8 @@ const NAV_TABS = [
 
 export default function App() {
   const [user, setUser]             = useState<User | null>(null)
-  const [appState, setAppState]     = useState<AppState>('loading')
   const [isAdmin, setIsAdmin]       = useState(false)
+  const [loading, setLoading]       = useState(true)
   const [tab, setTab]               = useState<Tab>('record')
   const [animKey, setAnimKey]       = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -72,17 +70,15 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user ?? null
       setUser(u)
-      if (u) loadUserData(u)
-      else setAppState('auth')
+      if (u) fetchProfile(u.id)
+      else setLoading(false)
     })
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       const u = session?.user ?? null
       setUser(u)
-      if (u) loadUserData(u)
-      else { setIsAdmin(false); setAppState('auth') }
+      if (u) fetchProfile(u.id)
+      else { setIsAdmin(false); setLoading(false) }
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
@@ -90,32 +86,20 @@ export default function App() {
     document.documentElement.style.setProperty('--brand', company.brand_color)
   }, [company.brand_color])
 
-  const loadUserData = async (u: User) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin, permissions, tenant_id')
-      .eq('id', u.id)
-      .maybeSingle()
-
-    // No profile or no tenant = needs onboarding
-    if (!profile || !profile.tenant_id) {
-      setAppState('onboarding')
-      return
-    }
-
-    const admin = profile.is_admin ?? false
+  const fetchProfile = async (userId: string) => {
+    const [profileRes, companyRes] = await Promise.all([
+      supabase.from('profiles').select('is_admin, permissions').eq('id', userId).maybeSingle(),
+      supabase.from('company_settings').select('*').limit(1).maybeSingle(),
+    ])
+    const admin = profileRes.data?.is_admin ?? false
     setIsAdmin(admin)
-    setPermissions(admin ? ADMIN_PERMS : (profile.permissions as Permissions) ?? DEFAULT_PERMS)
-
-    // Load company settings for this tenant
-    const { data: cs } = await supabase
-      .from('company_settings')
-      .select('*')
-      .eq('tenant_id', profile.tenant_id)
-      .single()
-
-    if (cs) setCompany(cs)
-    setAppState('app')
+    if (admin) {
+      setPermissions(ADMIN_PERMS)
+    } else if (profileRes.data?.permissions) {
+      setPermissions(profileRes.data.permissions as Permissions)
+    }
+    if (companyRes.data) setCompany(companyRes.data)
+    setLoading(false)
   }
 
   const switchTab = (newTab: Tab) => {
@@ -124,8 +108,7 @@ export default function App() {
     setAnimKey(k => k + 1)
   }
 
-  // ── Loading ─────────────────────────────────────────────
-  if (appState === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3"
         style={{ backgroundColor: company.brand_color + '15' }}>
@@ -136,29 +119,15 @@ export default function App() {
     )
   }
 
-  // ── Auth ────────────────────────────────────────────────
-  if (appState === 'auth' || !user) return <Auth company={company} />
+  if (!user) return <Auth company={company} />
 
-  // ── Onboarding ──────────────────────────────────────────
-  if (appState === 'onboarding') {
-    return (
-      <Onboarding
-        userId={user.id}
-        userEmail={user.email ?? ''}
-        onComplete={() => loadUserData(user)}
-      />
-    )
-  }
-
-  // ── Main App ────────────────────────────────────────────
   const visibleTabs = NAV_TABS.filter(t => permissions[t.perm as keyof Permissions])
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 fade-in">
+          <div className="flex items-center gap-2">
             <span className="text-xl">{company.logo_emoji}</span>
             <div>
               <div className="font-bold text-gray-900 text-sm leading-tight">{company.company_name}</div>
@@ -166,9 +135,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {online
-              ? <Wifi size={13} className="text-green-400" />
-              : <WifiOff size={13} className="text-gray-300" />}
+            {online ? <Wifi size={13} className="text-green-400" /> : <WifiOff size={13} className="text-gray-300" />}
             {isAdmin && (
               <button onClick={() => setShowDC(true)}
                 className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
@@ -177,15 +144,13 @@ export default function App() {
               </button>
             )}
             <button onClick={() => supabase.auth.signOut()}
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all active:scale-90"
-              title="Sign out">
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all active:scale-90">
               <LogOut size={16} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-4 pb-24">
         <div key={animKey} className="slide-up">
           <Suspense fallback={
@@ -203,7 +168,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-20 shadow-lg">
         <div className="max-w-2xl mx-auto px-2 py-1 flex justify-around">
           {visibleTabs.map(t => (
@@ -220,12 +184,10 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Domain Controller */}
       {showDC && (
         <DomainController
           userId={user.id}
           company={company}
-          tenantId={company.tenant_id ?? ''}
           onClose={() => setShowDC(false)}
           onCompanyUpdated={(c) => setCompany(c)}
           onProductsChanged={() => setRefreshKey(k => k + 1)}

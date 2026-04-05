@@ -23,7 +23,6 @@ type PaymentMethod = 'cash' | 'transfer' | 'credit' | 'pos'
 
 export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [products, setProducts] = useState<Product[]>([])
-  const [tenantId, setTenantId] = useState<string | null>(null)
   const [productId, setProductId] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<ProductUnit | null>(null)
   const [quantity, setQuantity] = useState('')
@@ -37,10 +36,6 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [priceEdited, setPriceEdited] = useState(false)
 
   useEffect(() => {
-    supabase.from('profiles').select('tenant_id').eq('id', userId).single()
-      .then(({ data }) => {
-        if (data?.tenant_id) setTenantId(data.tenant_id)
-      })
     supabase
       .from('products')
       .select('id, name, product_units(id, unit_label, unit_price)')
@@ -74,7 +69,6 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
 
     const { error } = await supabase.from('sales').insert({
       user_id: userId,
-      tenant_id: tenantId,
       product_id: productId,
       item_name: selectedProduct.name,
       unit_label: selectedUnit.unit_label,
