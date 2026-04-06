@@ -162,7 +162,7 @@ export default function App() {
             {tab === 'record'    && permissions.can_record_sales   && <SaleForm userId={user.id} onSaleAdded={() => setRefreshKey(k => k + 1)} />}
             {tab === 'history'   && permissions.can_view_history   && <SalesTable userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />}
             {tab === 'stock'     && (permissions.can_view_stock || permissions.can_add_stock) && <StockForm userId={user.id} isAdmin={isAdmin || permissions.can_add_stock} />}
-            {tab === 'analytics' && permissions.can_view_analytics && <Analytics userId={user.id} refreshKey={refreshKey} />}
+            {tab === 'analytics' && permissions.can_view_analytics && <Analytics userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} />}
             {tab === 'credit'    && permissions.can_manage_credit  && <CreditManager isAdmin={isAdmin} userId={user.id} />}
           </Suspense>
         </div>

@@ -31,6 +31,7 @@ interface StockRecord {
 
 interface Props {
   userId: string
+  isAdmin: boolean
   refreshKey: number
 }
 
@@ -41,7 +42,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   credit: '#f97316',
 }
 
-export default function Analytics({ userId, refreshKey }: Props) {
+export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
   const [sales, setSales] = useState<Sale[]>([])
   const [stockRecords, setStockRecords] = useState<StockRecord[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
@@ -50,15 +51,20 @@ export default function Analytics({ userId, refreshKey }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([
-      supabase.from('sales').select('*').eq('user_id', userId).order('sale_date', { ascending: false }),
-      supabase.from('stock_records').select('*').eq('user_id', userId).order('stock_date', { ascending: false }),
-    ]).then(([salesRes, stockRes]) => {
+    // Admins see ALL sales/stock; staff only see their own
+    const salesQuery = isAdmin
+      ? supabase.from('sales').select('*').order('sale_date', { ascending: false })
+      : supabase.from('sales').select('*').eq('user_id', userId).order('sale_date', { ascending: false })
+    const stockQuery = isAdmin
+      ? supabase.from('stock_records').select('*').order('stock_date', { ascending: false })
+      : supabase.from('stock_records').select('*').eq('user_id', userId).order('stock_date', { ascending: false })
+
+    Promise.all([salesQuery, stockQuery]).then(([salesRes, stockRes]) => {
       if (salesRes.data) setSales(salesRes.data)
       if (stockRes.data) setStockRecords(stockRes.data)
       setLoading(false)
     })
-  }, [userId, refreshKey])
+  }, [userId, isAdmin, refreshKey])
 
   const inMonth = (dateStr: string) => {
     const d = new Date(dateStr)
@@ -111,10 +117,14 @@ export default function Analytics({ userId, refreshKey }: Props) {
     .map(([day, revenue]) => ({ day: `${day}`, revenue }))
     .sort((a, b) => Number(a.day) - Number(b.day))
 
-  const exportCSV = () => {
+  const exportCSV = (all = false) => {
+    const dataToExport = all ? sales : monthSales
+    const filename = all
+      ? `sales-all-${selectedYear}.csv`
+      : `sales-${MONTHS[selectedMonth]}-${selectedYear}.csv`
     const rows = [
-      ['Date', 'Item', 'Unit', 'Quantity', 'Unit Price (₦)', 'Total (₦)', 'Payment', 'Customer', 'Paid At', 'Notes'],
-      ...monthSales.map(s => [
+      ['Date', 'Item', 'Unit', 'Quantity', 'Unit Price (N)', 'Total (N)', 'Payment', 'Customer', 'Paid At', 'Notes'],
+      ...dataToExport.map(s => [
         s.sale_date,
         s.item_name,
         s.unit_label || '',
@@ -127,12 +137,12 @@ export default function Analytics({ userId, refreshKey }: Props) {
         s.notes || '',
       ])
     ]
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
+    const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `sales-${MONTHS[selectedMonth]}-${selectedYear}.csv`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -161,9 +171,13 @@ export default function Analytics({ userId, refreshKey }: Props) {
               className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <button onClick={exportCSV}
+            <button onClick={() => exportCSV(false)}
               className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-              <Download size={15} /> Export CSV
+              <Download size={15} /> This Month
+            </button>
+            <button onClick={() => exportCSV(true)}
+              className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
+              <Download size={15} /> Full Year
             </button>
           </div>
         </div>
