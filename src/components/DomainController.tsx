@@ -142,13 +142,11 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
       })
       if (error) { setUserError(error.message); setCreatingUser(false); return }
 
-      // data.user exists whether email is confirmed or not
-      const userId = data.user?.id ?? data.session?.user?.id
-      if (userId) {
-        // Wait briefly for the profile trigger to fire
+      const newUserId = data.user?.id ?? data.session?.user?.id
+      if (newUserId) {
         await new Promise(r => setTimeout(r, 800))
         await supabase.from('profiles').upsert({
-          id: userId,
+          id: newUserId,
           email: newEmail.trim(),
           is_admin: false,
           permissions: DEFAULT_PERMISSIONS
@@ -172,17 +170,29 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
   }
 
   const deleteUser = async (uid: string, email: string) => {
-    if (!confirm(`Remove ${email}? This will revoke all their access.`)) return
-    // Revoke all permissions immediately
-    const noPerms: Permissions = {
-      can_record_sales: false, can_view_history: false, can_view_stock: false,
-      can_add_stock: false, can_view_analytics: false, can_manage_credit: false,
+    if (!confirm(`Delete ${email} permanently?`)) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ userId: uid }),
+        }
+      )
+      const result = await res.json()
+      if (result.error) {
+        alert('Error: ' + result.error)
+      } else {
+        setStaffUsers(prev => prev.filter(u => u.id !== uid))
+      }
+    } catch {
+      alert('Failed to delete user.')
     }
-    setStaffUsers(prev => prev.filter(u => u.id !== uid))
-    await supabase.from('profiles').update({ permissions: noPerms }).eq('id', uid)
-    // Try to delete from auth using admin API (requires service role — may not work with anon key)
-    // Deletion from auth requires Supabase admin API, so we just deactivate for now
-    // User won't be able to do anything even if they log in
   }
 
   const active = products.filter(p => p.is_active)
@@ -193,7 +203,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
       <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="w-full max-w-sm bg-white h-full overflow-y-auto flex flex-col shadow-2xl slide-in-right">
 
-        {/* Panel Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 z-10">
           <div className="flex items-center justify-between px-4 py-3">
             {section !== 'menu' ? (
@@ -210,7 +219,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
           </div>
         </div>
 
-        {/* MENU */}
         {section === 'menu' && (
           <div className="p-4 space-y-2 flex-1">
             <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-3">Manage</p>
@@ -239,7 +247,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
           </div>
         )}
 
-        {/* COMPANY SETTINGS */}
         {section === 'company' && (
           <div className="p-4 space-y-5 flex-1">
             <div>
@@ -292,7 +299,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
           </div>
         )}
 
-        {/* PRODUCTS */}
         {section === 'products' && (
           <div className="p-4 space-y-4 flex-1">
             <button onClick={openAddProduct}
@@ -376,7 +382,6 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
           </div>
         )}
 
-        {/* USERS */}
         {section === 'users' && (
           <div className="p-4 space-y-4 flex-1">
             <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -408,8 +413,7 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteUser(u.id, u.email) }}
                         className="w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-400 hover:bg-red-50 transition-all"
-                        title="Remove user"
-                      >
+                        title="Remove user">
                         <Trash2 size={13} />
                       </button>
                       <ChevronRight size={14} className={`text-gray-300 transition-transform ${expandedUser === u.id ? 'rotate-90' : ''}`} />
