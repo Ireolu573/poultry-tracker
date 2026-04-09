@@ -25,13 +25,15 @@ export function trackMetric(name: string, value: number, unit = 'ms') {
   metrics.push(metric)
 
   // Log to console in development
-  if (import.meta.env.DEV) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const win = window as any
+  if (process.env.NODE_ENV === 'development') {
     console.log(`📊 ${name}: ${value}${unit}`)
   }
 
   // Send to Vercel Speed Insights if available
-  if (window.gtag) {
-    window.gtag('event', 'performance_metric', {
+  if (win.gtag) {
+    win.gtag('event', 'performance_metric', {
       metric_name: name,
       value: value,
       unit: unit,
@@ -108,8 +110,10 @@ export function monitorWebVitals() {
     try {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          if ('value' in entry && !entry.hadRecentInput) {
-            trackMetric('CLS', Math.round(entry.value * 1000) / 1000)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const anyEntry = entry as any
+          if ('value' in entry && !anyEntry.hadRecentInput) {
+            trackMetric('CLS', Math.round(anyEntry.value * 1000) / 1000)
           }
         }
       })
