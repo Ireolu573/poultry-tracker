@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getProductsForTenant, insertSale } from '../lib/tenant-queries'
 import { PlusCircle } from 'lucide-react'
 
 interface ProductUnit {
@@ -16,13 +17,13 @@ interface Product {
 
 interface Props {
   userId: string
+  tenantId: string
   onSaleAdded: () => void
-  refreshKey?: number
 }
 
 type PaymentMethod = 'cash' | 'transfer' | 'credit' | 'pos'
 
-export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
+export default function SaleForm({ userId, tenantId, onSaleAdded }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [productId, setProductId] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<ProductUnit | null>(null)
@@ -37,13 +38,10 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
   const [priceEdited, setPriceEdited] = useState(false)
 
   useEffect(() => {
-    supabase
-      .from('products')
-      .select('id, name, product_units(id, unit_label, unit_price)')
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => { if (data) setProducts(data as Product[]) })
-  }, [refreshKey])
+    getProductsForTenant(tenantId).then(({ data }) => {
+      if (data) setProducts(data)
+    })
+  }, [tenantId])
 
   const total = Number(quantity) * Number(unitPrice) || 0
   const selectedProduct = products.find(p => p.id === productId)
@@ -68,8 +66,7 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
     if (!selectedProduct || !selectedUnit) return
     setLoading(true)
 
-    const { error } = await supabase.from('sales').insert({
-      user_id: userId,
+    const saleData = {
       product_id: productId,
       item_name: selectedProduct.name,
       unit_label: selectedUnit.unit_label,
@@ -79,7 +76,9 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
       payment_method: paymentMethod,
       customer_name: customerName || null,
       notes: notes || null,
-    })
+    }
+
+    const { error } = await insertSale(saleData, tenantId, userId)
 
     setLoading(false)
     if (!error) {
@@ -99,10 +98,10 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
   }
 
   const paymentOptions: { value: PaymentMethod; label: string; color: string }[] = [
-    { value: 'cash',     label: 'ðŸ’µ Cash',     color: 'bg-green-500' },
-    { value: 'transfer', label: 'ðŸ¦ Transfer', color: 'bg-blue-500' },
-    { value: 'pos',      label: 'ðŸ’³ POS',      color: 'bg-purple-500' },
-    { value: 'credit',   label: 'ðŸ“‹ Credit',   color: 'bg-orange-500' },
+    { value: 'cash',     label: '💵 Cash',     color: 'bg-green-500' },
+    { value: 'transfer', label: '🏦 Transfer', color: 'bg-blue-500' },
+    { value: 'pos',      label: '💳 POS',      color: 'bg-purple-500' },
+    { value: 'credit',   label: '📋 Credit',   color: 'bg-orange-500' },
   ]
 
   return (
@@ -120,8 +119,8 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Product */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-            <select value={productId} onChange={e => handleProductSelect(e.target.value)} required
+            <label htmlFor="product-select" className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+            <select id="product-select" value={productId} onChange={e => handleProductSelect(e.target.value)} required aria-required="true"
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option value="">Select a product...</option>
               {products.map(p => (
@@ -130,7 +129,7 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
             </select>
           </div>
 
-          {/* Unit â€” shows only after product is selected */}
+          {/* Unit — shows only after product is selected */}
           {selectedProduct && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
@@ -146,7 +145,7 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
                         : 'border-gray-200 text-gray-600 hover:bg-amber-50'
                     }`}
                   >
-                    {u.unit_label} Â· â‚¦{Number(u.unit_price).toLocaleString('en-NG')}
+                    {u.unit_label} · ₦{Number(u.unit_price).toLocaleString('en-NG')}
                   </button>
                 ))}
               </div>
@@ -157,28 +156,28 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
           {selectedUnit && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="quantity-input" className="block text-sm font-medium text-gray-700 mb-1">
                   Quantity <span className="text-amber-500">({selectedUnit.unit_label}s)</span>
                 </label>
-                <input type="number" min="0" step="any" value={quantity}
-                  onChange={e => setQuantity(e.target.value)} required placeholder="0"
+                <input id="quantity-input" type="number" min="0" step="any" value={quantity}
+                  onChange={e => setQuantity(e.target.value)} required placeholder="0" aria-required="true"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit Price (â‚¦) {priceEdited && <span className="text-xs text-orange-400">Â· edited</span>}
+                <label htmlFor="price-input" className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit Price (₦) {priceEdited && <span className="text-xs text-orange-400">· edited</span>}
                 </label>
-                <input type="number" min="0" step="any" value={unitPrice}
+                <input id="price-input" type="number" min="0" step="any" value={unitPrice}
                   onChange={e => { setUnitPrice(e.target.value); setPriceEdited(true) }}
-                  required placeholder="0.00"
+                  required placeholder="0.00" aria-required="true"
                   className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${priceEdited ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}
                 />
                 {priceEdited && (
                   <button type="button"
                     onClick={() => { setUnitPrice(String(selectedUnit.unit_price)); setPriceEdited(false) }}
                     className="text-xs text-amber-500 hover:text-amber-700 mt-1">
-                    Reset to â‚¦{Number(selectedUnit.unit_price).toLocaleString('en-NG')}
+                    Reset to ₦{Number(selectedUnit.unit_price).toLocaleString('en-NG')}
                   </button>
                 )}
               </div>
@@ -189,15 +188,15 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
           {selectedUnit && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} required
+                <label htmlFor="sale-date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input id="sale-date" type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} required aria-required="true"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
                 <div className="w-full border border-amber-200 bg-amber-50 rounded-lg px-3 py-2.5 text-sm font-semibold text-amber-800">
-                  â‚¦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+                  ₦{total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
@@ -206,28 +205,32 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
           {/* Payment Method */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-              <div className="flex gap-2">
-                {paymentOptions.map(opt => (
-                  <button key={opt.value} type="button" onClick={() => setPaymentMethod(opt.value)}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
-                      paymentMethod === opt.value ? 'border-transparent text-white ' + opt.color : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">Payment Method</legend>
+                <div className="flex gap-2">
+                  {paymentOptions.map(opt => (
+                    <button key={opt.value} type="button" onClick={() => setPaymentMethod(opt.value)}
+                      aria-pressed={paymentMethod === opt.value}
+                      aria-label={`Pay by ${opt.label}`}
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                        paymentMethod === opt.value ? 'border-transparent text-white ' + opt.color : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
           )}
 
           {/* Customer Name */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-1">
                 Customer Name {paymentMethod === 'credit' ? <span className="text-red-400">*</span> : <span className="text-gray-400">(optional)</span>}
               </label>
-              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                required={paymentMethod === 'credit'} placeholder="e.g. Mr. Emeka"
+              <input id="customer-name" type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
+                required={paymentMethod === 'credit'} placeholder="e.g. Mr. Emeka" aria-required={paymentMethod === 'credit'}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -236,8 +239,8 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
           {/* Notes */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-              <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+              <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <input id="notes-input" type="text" value={notes} onChange={e => setNotes(e.target.value)}
                 placeholder="Any extra info..."
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
@@ -246,12 +249,13 @@ export default function SaleForm({ userId, onSaleAdded, refreshKey }: Props) {
 
           {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
-              âœ… Sale recorded!
+              ✅ Sale recorded!
             </div>
           )}
 
           {selectedUnit && (
             <button type="submit" disabled={loading}
+              aria-busy={loading}
               className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
               {loading ? 'Saving...' : 'Save Sale'}
             </button>
