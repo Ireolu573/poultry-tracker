@@ -4,6 +4,7 @@ import Auth from './components/Auth'
 import DomainController from './components/DomainController'
 import type { User } from '@supabase/supabase-js'
 import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 const SaleForm      = lazy(() => import('./components/SaleForm'))
 const SalesTable    = lazy(() => import('./components/SalesTable'))
@@ -193,6 +194,7 @@ export default function App() {
           onProductsChanged={() => setRefreshKey(k => k + 1)}
         />
       )}
+      <SpeedInsights />
     </div>
   )
 }
