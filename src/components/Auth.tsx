@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function Auth() {
+interface CompanySettings { company_name: string; app_name: string; brand_color: string; logo_emoji: string }
+interface Props { company: CompanySettings }
+
+export default function Auth({ company }: Props) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-    setMessage('')
+    setLoading(true); setError(''); setMessage('')
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -21,89 +23,86 @@ export default function Auth() {
     } else {
       const { error } = await supabase.auth.signUp({ email, password })
       if (error) setError(error.message)
-      else setMessage('Check your email to confirm your account.')
+      else setMessage('Account created! Set up your business on the next screen.')
     }
-
     setLoading(false)
   }
 
+  const handleGoogle = async () => {
+    setGoogleLoading(true)
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    })
+    setGoogleLoading(false)
+  }
+
   return (
-    <div className="min-h-screen bg-amber-50 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4"
+      style={{ backgroundColor: company.brand_color + '15' }}>
       <div className="w-full max-w-sm">
-        {/* Logo / Header */}
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🐔</div>
-          <h1 className="text-2xl font-bold text-amber-900 tracking-tight">Poultry Tracker</h1>
-          <p className="text-amber-700 text-sm mt-1">Sales & Business Records</p>
+        <div className="text-center mb-8 slide-up">
+          <div className="text-5xl mb-3">{company.logo_emoji}</div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{company.company_name}</h1>
+          <p className="text-gray-500 text-sm mt-1">{company.app_name}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-amber-100 p-6">
-          <div className="flex bg-amber-50 rounded-xl p-1 mb-6">
-            <button
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'login'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-700 hover:text-amber-900'
-              }`}
-            >
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 slide-up space-y-4">
+          {/* Google sign in */}
+          <button onClick={handleGoogle} disabled={googleLoading}
+            className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-60">
+            <svg width="18" height="18" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            {googleLoading ? 'Signing in...' : 'Continue with Google'}
+          </button>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-xs text-gray-400">or</span>
+            <div className="flex-1 h-px bg-gray-100" />
+          </div>
+
+          {/* Tab switcher */}
+          <div className="flex bg-gray-50 rounded-xl p-1">
+            <button onClick={() => setMode('login')}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'login' ? 'text-white shadow-sm' : 'text-gray-600'}`}
+              style={mode === 'login' ? { backgroundColor: company.brand_color } : {}}>
               Log In
             </button>
-            <button
-              onClick={() => setMode('signup')}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'signup'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-amber-700 hover:text-amber-900'
-              }`}
-            >
-              Sign Up
+            <button onClick={() => setMode('signup')}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'signup' ? 'text-white shadow-sm' : 'text-gray-600'}`}
+              style={mode === 'signup' ? { backgroundColor: company.brand_color } : {}}>
+              New Business
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                placeholder="you@example.com"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              placeholder="Email address"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+              placeholder="Password"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
-                {error}
-              </div>
-            )}
-            {message && (
-              <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
-                {message}
-              </div>
-            )}
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>}
+            {message && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-3 py-2">{message}</div>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
-            >
+            <button type="submit" disabled={loading}
+              className="w-full disabled:opacity-60 text-white font-semibold py-2.5 rounded-xl text-sm transition-all active:scale-95"
+              style={{ backgroundColor: company.brand_color }}>
               {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Create Account'}
             </button>
           </form>
+
+          {mode === 'signup' && (
+            <p className="text-xs text-gray-400 text-center">
+              After signing up, you'll set up your business profile
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -47,9 +47,6 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
   const [stockRecords, setStockRecords] = useState<StockRecord[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [filterMode, setFilterMode] = useState<'month' | 'range'>('month')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -69,21 +66,13 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
     })
   }, [userId, isAdmin, refreshKey])
 
-  const inRange = (dateStr: string) => {
-    if (filterMode === 'month') {
-      const d = new Date(dateStr)
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
-    }
-    const from = dateFrom || '2000-01-01'
-    const to = dateTo || '2099-12-31'
-    return dateStr >= from && dateStr <= to
+  const inMonth = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
   }
 
-  const monthSales = sales.filter(s => inRange(s.sale_date))
-  const monthStock = stockRecords.filter(s => inRange(s.stock_date))
-  const periodLabel = filterMode === 'month' 
-    ? `${MONTHS[selectedMonth]} ${selectedYear}`
-    : dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `Until ${dateTo}` : 'All time'
+  const monthSales = sales.filter(s => inMonth(s.sale_date))
+  const monthStock = stockRecords.filter(s => inMonth(s.stock_date))
 
   // Revenue metrics
   const totalRevenue = monthSales.reduce((sum, s) => sum + Number(s.total_amount), 0)
@@ -173,50 +162,23 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             <TrendingUp size={20} className="text-amber-600" />
             Monthly Report
           </h2>
-          <div className="flex flex-col gap-2 w-full mt-2">
-            {/* Mode toggle */}
-            <div className="flex bg-gray-100 rounded-lg p-0.5 w-fit">
-              <button onClick={() => setFilterMode('month')}
-                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'month' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}`}>
-                By month
-              </button>
-              <button onClick={() => setFilterMode('range')}
-                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'range' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}`}>
-                Date range
-              </button>
-            </div>
-
-            {filterMode === 'month' ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
-                  {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-                </select>
-                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
-                  {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                <span className="text-gray-400 text-sm">to</span>
-                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={() => exportCSV(false)}
-                className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-                <Download size={15} /> Export Period
-              </button>
-              <button onClick={() => exportCSV(true)}
-                className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
-                <Download size={15} /> Full Year
-              </button>
-            </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+              {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+            </select>
+            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <button onClick={() => exportCSV(false)}
+              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <Download size={15} /> This Month
+            </button>
+            <button onClick={() => exportCSV(true)}
+              className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
+              <Download size={15} /> Full Year
+            </button>
           </div>
         </div>
 
@@ -298,7 +260,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Daily Revenue Chart */}
       {dailyData.length > 0 && (
         <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5">
-          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue — {periodLabel}</h3>
+          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue — {MONTHS[selectedMonth]} {selectedYear}</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#fef3c7" />
@@ -338,7 +300,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Stock Purchases This Month */}
       {monthStock.length > 0 && (
         <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
-          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased — {periodLabel}</h3>
+          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased — {MONTHS[selectedMonth]} {selectedYear}</h3>
           <div className="space-y-2">
             {monthStock.map(s => (
               <div key={s.id} className="flex justify-between text-sm py-1.5 border-b border-gray-50">
@@ -359,7 +321,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
 
       {monthSales.length === 0 && !loading && (
         <div className="bg-white rounded-2xl border border-amber-100 p-10 text-center text-amber-400">
-          No sales recorded for {periodLabel}.
+          No sales recorded for {MONTHS[selectedMonth]} {selectedYear}.
         </div>
       )}
     </div>

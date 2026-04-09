@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { PlusCircle, MessageCircle } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 
 interface ProductUnit {
   id: string
@@ -34,12 +34,6 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [priceEdited, setPriceEdited] = useState(false)
-  const [lastSale, setLastSale] = useState<any>(null)
-
-  // Customer book
-  const [savedCustomers, setSavedCustomers] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const customerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase
@@ -48,39 +42,10 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       .eq('is_active', true)
       .order('name')
       .then(({ data }) => { if (data) setProducts(data as Product[]) })
-
-    // Load saved customers from past sales
-    supabase
-      .from('sales')
-      .select('customer_name')
-      .not('customer_name', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(200)
-      .then(({ data }) => {
-        if (data) {
-          const unique = [...new Set(data.map(s => s.customer_name).filter(Boolean))] as string[]
-          setSavedCustomers(unique)
-        }
-      })
-  }, [])
-
-  // Close suggestions on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (customerRef.current && !customerRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   const total = Number(quantity) * Number(unitPrice) || 0
   const selectedProduct = products.find(p => p.id === productId)
-
-  const filteredCustomers = savedCustomers.filter(c =>
-    customerName && c.toLowerCase().includes(customerName.toLowerCase()) && c !== customerName
-  )
 
   const handleProductSelect = (id: string) => {
     setProductId(id)
@@ -102,7 +67,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
     if (!selectedProduct || !selectedUnit) return
     setLoading(true)
 
-    const saleData = {
+    const { error } = await supabase.from('sales').insert({
       user_id: userId,
       product_id: productId,
       item_name: selectedProduct.name,
@@ -113,19 +78,10 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       payment_method: paymentMethod,
       customer_name: customerName || null,
       notes: notes || null,
-    }
-
-    const { error } = await supabase.from('sales').insert(saleData)
+    })
 
     setLoading(false)
     if (!error) {
-      setLastSale({ ...saleData, total_amount: total })
-
-      // Add to saved customers if new
-      if (customerName && !savedCustomers.includes(customerName)) {
-        setSavedCustomers(prev => [customerName, ...prev])
-      }
-
       setProductId('')
       setSelectedUnit(null)
       setQuantity('')
@@ -136,32 +92,9 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       setPaymentMethod('cash')
       setSaleDate(new Date().toISOString().split('T')[0])
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 4000)
+      setTimeout(() => setSuccess(false), 2500)
       onSaleAdded()
     }
-  }
-
-  const sendWhatsApp = () => {
-    if (!lastSale) return
-    const date = new Date(lastSale.sale_date).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    const receipt = [
-      `🧾 *Sales Receipt*`,
-      `━━━━━━━━━━━━━━━`,
-      `📦 *${lastSale.item_name}*`,
-      `   Unit: ${lastSale.unit_label}`,
-      `   Qty: ${lastSale.quantity} × ₦${Number(lastSale.unit_price).toLocaleString('en-NG')}`,
-      `━━━━━━━━━━━━━━━`,
-      `💰 *Total: ₦${Number(lastSale.total_amount).toLocaleString('en-NG')}*`,
-      `💳 Payment: ${lastSale.payment_method.toUpperCase()}`,
-      lastSale.customer_name ? `👤 Customer: ${lastSale.customer_name}` : '',
-      `📅 Date: ${date}`,
-      lastSale.notes ? `📝 ${lastSale.notes}` : '',
-      `━━━━━━━━━━━━━━━`,
-      `Thank you for your patronage! 🙏`,
-    ].filter(Boolean).join('\n')
-
-    const url = `https://wa.me/?text=${encodeURIComponent(receipt)}`
-    window.open(url, '_blank')
   }
 
   const paymentOptions: { value: PaymentMethod; label: string; color: string }[] = [
@@ -196,16 +129,22 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
             </select>
           </div>
 
-          {/* Unit */}
+          {/* Unit — shows only after product is selected */}
           {selectedProduct && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
               <div className="flex flex-wrap gap-2">
                 {selectedProduct.product_units.map(u => (
-                  <button key={u.id} type="button" onClick={() => handleUnitSelect(u.id)}
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleUnitSelect(u.id)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                      selectedUnit?.id === u.id ? 'bg-amber-600 text-white border-transparent' : 'border-gray-200 text-gray-600 hover:bg-amber-50'
-                    }`}>
+                      selectedUnit?.id === u.id
+                        ? 'bg-amber-600 text-white border-transparent'
+                        : 'border-gray-200 text-gray-600 hover:bg-amber-50'
+                    }`}
+                  >
                     {u.unit_label} · ₦{Number(u.unit_price).toLocaleString('en-NG')}
                   </button>
                 ))}
@@ -280,43 +219,16 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
             </div>
           )}
 
-          {/* Customer Name with autocomplete */}
+          {/* Customer Name */}
           {selectedUnit && (
-            <div ref={customerRef} className="relative">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Customer Name {paymentMethod === 'credit' ? <span className="text-red-400">*</span> : <span className="text-gray-400">(optional)</span>}
-                {savedCustomers.length > 0 && <span className="text-xs text-amber-500 ml-2">📖 {savedCustomers.length} saved</span>}
               </label>
-              <input type="text" value={customerName}
-                onChange={e => { setCustomerName(e.target.value); setShowSuggestions(true) }}
-                onFocus={() => setShowSuggestions(true)}
+              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
                 required={paymentMethod === 'credit'} placeholder="e.g. Mr. Emeka"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
-              {/* Suggestions dropdown */}
-              {showSuggestions && filteredCustomers.length > 0 && (
-                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
-                  {filteredCustomers.slice(0, 8).map(c => (
-                    <button key={c} type="button"
-                      onMouseDown={() => { setCustomerName(c); setShowSuggestions(false) }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-gray-700 border-b border-gray-50 last:border-0">
-                      👤 {c}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {/* Show all customers when field is empty and focused */}
-              {showSuggestions && !customerName && savedCustomers.length > 0 && (
-                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
-                  {savedCustomers.slice(0, 8).map(c => (
-                    <button key={c} type="button"
-                      onMouseDown={() => { setCustomerName(c); setShowSuggestions(false) }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 text-gray-700 border-b border-gray-50 last:border-0">
-                      👤 {c}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 
@@ -332,14 +244,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between">
-                <span className="text-green-700 text-sm">✅ Sale recorded!</span>
-                <button type="button" onClick={sendWhatsApp}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-green-500 hover:bg-green-600 px-3 py-1.5 rounded-lg transition-colors">
-                  <MessageCircle size={13} /> Send Receipt
-                </button>
-              </div>
+            <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
+              ✅ Sale recorded!
             </div>
           )}
 
