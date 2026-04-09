@@ -34,6 +34,7 @@ const PERM_LABELS: { key: keyof Permissions; label: string }[] = [
 
 interface Props {
   userId: string
+  tenantId: string
   company: CompanySettings
   onClose: () => void
   onCompanyUpdated: (c: CompanySettings) => void
@@ -42,7 +43,7 @@ interface Props {
 
 type Section = 'menu' | 'company' | 'products' | 'users'
 
-export default function DomainController({ userId, company, onClose, onCompanyUpdated, onProductsChanged }: Props) {
+export default function DomainController({ userId, tenantId, company, onClose, onCompanyUpdated, onProductsChanged }: Props) {
   const [section, setSection] = useState<Section>('menu')
   const [companyName, setCompanyName] = useState(company.company_name)
   const [appName, setAppName] = useState(company.app_name)
@@ -111,7 +112,7 @@ export default function DomainController({ userId, company, onClose, onCompanyUp
       await supabase.from('product_units').delete().eq('product_id', editingProductId)
       await supabase.from('product_units').insert(validUnits.map(u => ({ product_id: editingProductId, unit_label: u.unit_label, unit_price: Number(u.unit_price) })))
     } else {
-      const { data: newProd } = await supabase.from('products').insert({ name: productName.trim(), is_active: true }).select().single()
+      const { data: newProd } = await supabase.from('products').insert({ name: productName.trim(), is_active: true, tenant_id: tenantId }).select().single()
       if (newProd) await supabase.from('product_units').insert(validUnits.map(u => ({ product_id: newProd.id, unit_label: u.unit_label, unit_price: Number(u.unit_price) })))
     }
     setSavingProduct(false); setShowProductForm(false)

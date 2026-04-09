@@ -269,8 +269,9 @@ export default function App() {
 
       {showDC && (
         <DomainController
-          userId={user.id}
-          company={company}
+  userId={user.id}
+  tenantId={tenantId ?? ''}
+  company={company}
           onClose={() => setShowDC(false)}
           onCompanyUpdated={(c) => setCompany(c)}
           onProductsChanged={() => setRefreshKey(k => k + 1)}
