@@ -231,7 +231,7 @@ export default function StockForm({ userId, isAdmin }: Props) {
                     <td className="py-2.5 px-2 text-right text-gray-700">₦{Number(r.cost_price).toLocaleString()}</td>
                     <td className="py-2.5 px-2 text-right font-semibold text-blue-700">₦{Number(r.total_cost).toLocaleString()}</td>
                     <td className="py-2.5 px-2">
-                      <button onClick={() => handleDelete(r.id)} aria-label={`Delete ${r.item_name}`} className=\"text-gray-300 hover:text-red-400 transition-colors\">✕</button>
+                      <button onClick={() => handleDelete(r.id)} aria-label={`Delete ${r.item_name}`} className="text-gray-300 hover:text-red-400 transition-colors">✕</button>
                     </td>
                   </tr>
                 ))}

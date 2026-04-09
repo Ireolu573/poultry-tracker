@@ -191,7 +191,7 @@ export default function SalesTable({ userId, isAdmin, refreshKey, onDelete }: Pr
                     {paymentBadge(s.payment_method, s.paid_via)}
                   </td>
                   <td className="py-2.5 px-2">
-                    <button onClick={() => handleDelete(s.id)} aria-label={`Delete ${s.item_name} sale`} className=\"text-gray-300 hover:text-red-400 transition-colors\">
+                    <button onClick={() => handleDelete(s.id)} aria-label={`Delete ${s.item_name} sale`} className="text-gray-300 hover:text-red-400 transition-colors">
                       <Trash2 size={15} />
                     </button>
                   </td>
