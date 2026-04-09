@@ -47,6 +47,9 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
   const [stockRecords, setStockRecords] = useState<StockRecord[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [filterMode, setFilterMode] = useState<'month' | 'range'>('month')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,13 +69,21 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
     })
   }, [userId, isAdmin, refreshKey])
 
-  const inMonth = (dateStr: string) => {
-    const d = new Date(dateStr)
-    return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
+  const inRange = (dateStr: string) => {
+    if (filterMode === 'month') {
+      const d = new Date(dateStr)
+      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear
+    }
+    const from = dateFrom || '2000-01-01'
+    const to = dateTo || '2099-12-31'
+    return dateStr >= from && dateStr <= to
   }
 
-  const monthSales = sales.filter(s => inMonth(s.sale_date))
-  const monthStock = stockRecords.filter(s => inMonth(s.stock_date))
+  const monthSales = sales.filter(s => inRange(s.sale_date))
+  const monthStock = stockRecords.filter(s => inRange(s.stock_date))
+  const periodLabel = filterMode === 'month' 
+    ? `${MONTHS[selectedMonth]} ${selectedYear}`
+    : dateFrom && dateTo ? `${dateFrom} â†’ ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `Until ${dateTo}` : 'All time'
 
   // Revenue metrics
   const totalRevenue = monthSales.reduce((sum, s) => sum + Number(s.total_amount), 0)
@@ -162,23 +173,50 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             <TrendingUp size={20} className="text-amber-600" />
             Monthly Report
           </h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
-              {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-            </select>
-            <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <button onClick={() => exportCSV(false)}
-              className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-              <Download size={15} /> This Month
-            </button>
-            <button onClick={() => exportCSV(true)}
-              className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
-              <Download size={15} /> Full Year
-            </button>
+          <div className="flex flex-col gap-2 w-full mt-2">
+            {/* Mode toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-0.5 w-fit">
+              <button onClick={() => setFilterMode('month')}
+                className={filterMode === 'month' ? 'text-xs font-medium px-3 py-1.5 rounded-md bg-white text-amber-700 shadow-sm' : 'text-xs font-medium px-3 py-1.5 rounded-md text-gray-500'}>
+                By month
+              </button>
+              <button onClick={() => setFilterMode('range')}
+                className={filterMode === 'range' ? 'text-xs font-medium px-3 py-1.5 rounded-md bg-white text-amber-700 shadow-sm' : 'text-xs font-medium px-3 py-1.5 rounded-md text-gray-500'}>
+                Date range
+              </button>
+            </div>
+
+            {filterMode === 'month' ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                </select>
+                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <span className="text-gray-400 text-sm">to</span>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={() => exportCSV(false)}
+                className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                <Download size={15} /> Export Period
+              </button>
+              <button onClick={() => exportCSV(true)}
+                className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
+                <Download size={15} /> Full Year
+              </button>
+            </div>
           </div>
         </div>
 
@@ -188,27 +226,27 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             <div className="text-xs text-amber-600 font-medium mb-1 flex items-center gap-1">
               <Banknote size={13} /> Total Revenue
             </div>
-            <div className="text-xl font-bold text-amber-900">₦{totalRevenue.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-amber-900">â‚¦{totalRevenue.toLocaleString('en-NG')}</div>
           </div>
           <div className="bg-blue-50 rounded-xl p-4">
             <div className="text-xs text-blue-600 font-medium mb-1 flex items-center gap-1">
               <ShoppingCart size={13} /> Stock Cost
             </div>
-            <div className="text-xl font-bold text-blue-900">₦{totalStockCost.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-blue-900">â‚¦{totalStockCost.toLocaleString('en-NG')}</div>
           </div>
           <div className={`rounded-xl p-4 ${estimatedProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
             <div className={`text-xs font-medium mb-1 flex items-center gap-1 ${estimatedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               <TrendingDown size={13} /> Est. Profit
             </div>
             <div className={`text-xl font-bold ${estimatedProfit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
-              ₦{estimatedProfit.toLocaleString('en-NG')}
+              â‚¦{estimatedProfit.toLocaleString('en-NG')}
             </div>
           </div>
           <div className="bg-orange-50 rounded-xl p-4">
             <div className="text-xs text-orange-600 font-medium mb-1 flex items-center gap-1">
               <CreditCard size={13} /> Credit Owed
             </div>
-            <div className="text-xl font-bold text-orange-900">₦{outstandingCredit.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-orange-900">â‚¦{outstandingCredit.toLocaleString('en-NG')}</div>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="text-xs text-gray-500 font-medium mb-1 flex items-center gap-1">
@@ -236,21 +274,21 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => `₦${v.toLocaleString('en-NG')}`} />
+                <Tooltip formatter={(v: number) => `â‚¦${v.toLocaleString('en-NG')}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {[
-              { label: '💵 Cash', value: cashRevenue, color: 'text-green-700 bg-green-50' },
-              { label: '🏦 Transfer', value: transferRevenue, color: 'text-blue-700 bg-blue-50' },
-              { label: '💳 POS', value: posRevenue, color: 'text-purple-700 bg-purple-50' },
-              { label: '📋 Credit', value: creditRevenue, color: 'text-orange-700 bg-orange-50' },
+              { label: 'ðŸ’µ Cash', value: cashRevenue, color: 'text-green-700 bg-green-50' },
+              { label: 'ðŸ¦ Transfer', value: transferRevenue, color: 'text-blue-700 bg-blue-50' },
+              { label: 'ðŸ’³ POS', value: posRevenue, color: 'text-purple-700 bg-purple-50' },
+              { label: 'ðŸ“‹ Credit', value: creditRevenue, color: 'text-orange-700 bg-orange-50' },
             ].filter(item => item.value > 0).map(item => (
               <div key={item.label} className={`rounded-xl p-3 ${item.color}`}>
                 <div className="text-xs font-medium mb-1">{item.label}</div>
-                <div className="text-sm font-bold">₦{item.value.toLocaleString('en-NG')}</div>
+                <div className="text-sm font-bold">â‚¦{item.value.toLocaleString('en-NG')}</div>
               </div>
             ))}
           </div>
@@ -260,13 +298,13 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Daily Revenue Chart */}
       {dailyData.length > 0 && (
         <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5">
-          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue — {MONTHS[selectedMonth]} {selectedYear}</h3>
+          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue â€” {periodLabel}</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#fef3c7" />
               <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `₦${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [`₦${v.toLocaleString('en-NG')}`, 'Revenue']} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `â‚¦${(v/1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number) => [`â‚¦${v.toLocaleString('en-NG')}`, 'Revenue']} />
               <Bar dataKey="revenue" fill="#d97706" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -284,7 +322,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-gray-800 truncate">{item.name}</span>
-                    <span className="text-amber-700 font-semibold ml-2">₦{item.revenue.toLocaleString('en-NG')}</span>
+                    <span className="text-amber-700 font-semibold ml-2">â‚¦{item.revenue.toLocaleString('en-NG')}</span>
                   </div>
                   <div className="bg-amber-100 rounded-full h-1.5">
                     <div className="bg-amber-500 rounded-full h-1.5 transition-all"
@@ -300,7 +338,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Stock Purchases This Month */}
       {monthStock.length > 0 && (
         <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
-          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased — {MONTHS[selectedMonth]} {selectedYear}</h3>
+          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased â€” {periodLabel}</h3>
           <div className="space-y-2">
             {monthStock.map(s => (
               <div key={s.id} className="flex justify-between text-sm py-1.5 border-b border-gray-50">
@@ -308,12 +346,12 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
                   <span className="font-medium text-gray-800">{s.item_name}</span>
                   <span className="text-gray-400 ml-2 text-xs">{Number(s.quantity).toLocaleString()} units</span>
                 </div>
-                <span className="text-blue-700 font-semibold">₦{Number(s.total_cost).toLocaleString('en-NG')}</span>
+                <span className="text-blue-700 font-semibold">â‚¦{Number(s.total_cost).toLocaleString('en-NG')}</span>
               </div>
             ))}
             <div className="flex justify-between text-sm pt-1 font-bold">
               <span className="text-blue-800">Total Spent</span>
-              <span className="text-blue-800">₦{totalStockCost.toLocaleString('en-NG')}</span>
+              <span className="text-blue-800">â‚¦{totalStockCost.toLocaleString('en-NG')}</span>
             </div>
           </div>
         </div>
@@ -321,7 +359,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
 
       {monthSales.length === 0 && !loading && (
         <div className="bg-white rounded-2xl border border-amber-100 p-10 text-center text-amber-400">
-          No sales recorded for {MONTHS[selectedMonth]} {selectedYear}.
+          No sales recorded for {periodLabel}.
         </div>
       )}
     </div>
