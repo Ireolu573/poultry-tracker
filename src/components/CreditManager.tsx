@@ -101,6 +101,8 @@ export default function CreditManager({ isAdmin, userId }: Props) {
                 <button
                   onClick={() => markAsPaid(s.id, 'cash')}
                   disabled={settlingId === s.id}
+                  aria-busy={settlingId === s.id}
+                  aria-label={`Mark ${s.customer_name} payment as received via cash`}
                   className="flex-1 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
                 >
                   💵 Paid — Cash
@@ -108,6 +110,8 @@ export default function CreditManager({ isAdmin, userId }: Props) {
                 <button
                   onClick={() => markAsPaid(s.id, 'transfer')}
                   disabled={settlingId === s.id}
+                  aria-busy={settlingId === s.id}
+                  aria-label={`Mark ${s.customer_name} payment as received via transfer`}
                   className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
                 >
                   🏦 Paid — Transfer

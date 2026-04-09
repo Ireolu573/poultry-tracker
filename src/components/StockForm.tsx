@@ -111,8 +111,8 @@ export default function StockForm({ userId, isAdmin }: Props) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-            <select value={productId} onChange={e => handleProductSelect(e.target.value)} required
+            <label htmlFor="stock-product" className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+            <select id="stock-product" value={productId} onChange={e => handleProductSelect(e.target.value)} required aria-required="true"
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option value="">Select a product...</option>
               {products.map(p => (
@@ -123,37 +123,41 @@ export default function StockForm({ userId, isAdmin }: Props) {
 
           {selectedProduct && selectedProduct.product_units.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
-              <div className="flex flex-wrap gap-2">
-                {selectedProduct.product_units.map(u => (
-                  <button key={u.id} type="button"
-                    onClick={() => setSelectedUnitLabel(u.unit_label)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                      selectedUnitLabel === u.unit_label
-                        ? 'bg-blue-600 text-white border-transparent'
-                        : 'border-gray-200 text-gray-600 hover:bg-blue-50'
-                    }`}>
-                    {u.unit_label}
-                  </button>
-                ))}
-              </div>
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">Unit</legend>
+                <div className="flex flex-wrap gap-2" role="group">
+                  {selectedProduct.product_units.map(u => (
+                    <button key={u.id} type="button"
+                      onClick={() => setSelectedUnitLabel(u.unit_label)}
+                      aria-pressed={selectedUnitLabel === u.unit_label}
+                      aria-label={`${u.unit_label} unit`}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                        selectedUnitLabel === u.unit_label
+                          ? 'bg-blue-600 text-white border-transparent'
+                          : 'border-gray-200 text-gray-600 hover:bg-blue-50'
+                      }`}>
+                      {u.unit_label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="stock-quantity" className="block text-sm font-medium text-gray-700 mb-1">
                 Quantity {selectedUnitLabel && <span className="text-blue-500">({selectedUnitLabel}s)</span>}
               </label>
-              <input type="number" min="0" step="any" value={quantity}
-                onChange={e => setQuantity(e.target.value)} required placeholder="0"
+              <input id="stock-quantity" type="number" min="0" step="any" value={quantity}
+                onChange={e => setQuantity(e.target.value)} required placeholder="0" aria-required="true"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price per unit (₦)</label>
-              <input type="number" min="0" step="any" value={costPrice}
-                onChange={e => setCostPrice(e.target.value)} required placeholder="0.00"
+              <label htmlFor="stock-cost-price" className="block text-sm font-medium text-gray-700 mb-1">Cost Price per unit (₦)</label>
+              <input id="stock-cost-price" type="number" min="0" step="any" value={costPrice}
+                onChange={e => setCostPrice(e.target.value)} required placeholder="0.00" aria-required="true"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -161,8 +165,8 @@ export default function StockForm({ userId, isAdmin }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input type="date" value={stockDate} onChange={e => setStockDate(e.target.value)} required
+              <label htmlFor="stock-date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input id="stock-date" type="date" value={stockDate} onChange={e => setStockDate(e.target.value)} required aria-required="true"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -175,8 +179,8 @@ export default function StockForm({ userId, isAdmin }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-            <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+            <label htmlFor="stock-notes" className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <input id="stock-notes" type="text" value={notes} onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Supplier name, batch info..."
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
@@ -188,7 +192,7 @@ export default function StockForm({ userId, isAdmin }: Props) {
             </div>
           )}
 
-          <button type="submit" disabled={loading}
+          <button type="submit" disabled={loading} aria-busy={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
             {loading ? 'Saving...' : 'Save Stock Record'}
           </button>
@@ -227,7 +231,7 @@ export default function StockForm({ userId, isAdmin }: Props) {
                     <td className="py-2.5 px-2 text-right text-gray-700">₦{Number(r.cost_price).toLocaleString()}</td>
                     <td className="py-2.5 px-2 text-right font-semibold text-blue-700">₦{Number(r.total_cost).toLocaleString()}</td>
                     <td className="py-2.5 px-2">
-                      <button onClick={() => handleDelete(r.id)} className="text-gray-300 hover:text-red-400 transition-colors">✕</button>
+                      <button onClick={() => handleDelete(r.id)} aria-label={`Delete ${r.item_name}`} className=\"text-gray-300 hover:text-red-400 transition-colors\">✕</button>
                     </td>
                   </tr>
                 ))}
