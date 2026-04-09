@@ -83,7 +83,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
   const monthStock = stockRecords.filter(s => inRange(s.stock_date))
   const periodLabel = filterMode === 'month' 
     ? `${MONTHS[selectedMonth]} ${selectedYear}`
-    : dateFrom && dateTo ? `${dateFrom} â†’ ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `Until ${dateTo}` : 'All time'
+    : dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : dateFrom ? `From ${dateFrom}` : dateTo ? `Until ${dateTo}` : 'All time'
 
   // Revenue metrics
   const totalRevenue = monthSales.reduce((sum, s) => sum + Number(s.total_amount), 0)
@@ -226,27 +226,27 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             <div className="text-xs text-amber-600 font-medium mb-1 flex items-center gap-1">
               <Banknote size={13} /> Total Revenue
             </div>
-            <div className="text-xl font-bold text-amber-900">{"â‚¦"}{totalRevenue.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-amber-900">{"₦"}{totalRevenue.toLocaleString('en-NG')}</div>
           </div>
           <div className="bg-blue-50 rounded-xl p-4">
             <div className="text-xs text-blue-600 font-medium mb-1 flex items-center gap-1">
               <ShoppingCart size={13} /> Stock Cost
             </div>
-            <div className="text-xl font-bold text-blue-900">{"â‚¦"}{totalStockCost.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-blue-900">{"₦"}{totalStockCost.toLocaleString('en-NG')}</div>
           </div>
           <div className={`rounded-xl p-4 ${estimatedProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
             <div className={`text-xs font-medium mb-1 flex items-center gap-1 ${estimatedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               <TrendingDown size={13} /> Est. Profit
             </div>
             <div className={`text-xl font-bold ${estimatedProfit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
-              {"â‚¦"}{estimatedProfit.toLocaleString('en-NG')}
+              {"₦"}{estimatedProfit.toLocaleString('en-NG')}
             </div>
           </div>
           <div className="bg-orange-50 rounded-xl p-4">
             <div className="text-xs text-orange-600 font-medium mb-1 flex items-center gap-1">
               <CreditCard size={13} /> Credit Owed
             </div>
-            <div className="text-xl font-bold text-orange-900">{"â‚¦"}{outstandingCredit.toLocaleString('en-NG')}</div>
+            <div className="text-xl font-bold text-orange-900">{"₦"}{outstandingCredit.toLocaleString('en-NG')}</div>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="text-xs text-gray-500 font-medium mb-1 flex items-center gap-1">
@@ -288,7 +288,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             ].filter(item => item.value > 0).map(item => (
               <div key={item.label} className={`rounded-xl p-3 ${item.color}`}>
                 <div className="text-xs font-medium mb-1">{item.label}</div>
-                <div className="text-sm font-bold">{"â‚¦"}{item.value.toLocaleString('en-NG')}</div>
+                <div className="text-sm font-bold">{"₦"}{item.value.toLocaleString('en-NG')}</div>
               </div>
             ))}
           </div>
@@ -298,7 +298,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Daily Revenue Chart */}
       {dailyData.length > 0 && (
         <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5">
-          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue â€” {periodLabel}</h3>
+          <h3 className="font-semibold text-amber-900 mb-4 text-sm">Daily Revenue — {periodLabel}</h3>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#fef3c7" />
@@ -322,7 +322,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-gray-800 truncate">{item.name}</span>
-                    <span className="text-amber-700 font-semibold ml-2">{"â‚¦"}{item.revenue.toLocaleString('en-NG')}</span>
+                    <span className="text-amber-700 font-semibold ml-2">{"₦"}{item.revenue.toLocaleString('en-NG')}</span>
                   </div>
                   <div className="bg-amber-100 rounded-full h-1.5">
                     <div className="bg-amber-500 rounded-full h-1.5 transition-all"
@@ -338,7 +338,7 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
       {/* Stock Purchases This Month */}
       {monthStock.length > 0 && (
         <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-5">
-          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased â€” {periodLabel}</h3>
+          <h3 className="font-semibold text-blue-900 mb-3 text-sm">Stock Purchased — {periodLabel}</h3>
           <div className="space-y-2">
             {monthStock.map(s => (
               <div key={s.id} className="flex justify-between text-sm py-1.5 border-b border-gray-50">
@@ -346,12 +346,12 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
                   <span className="font-medium text-gray-800">{s.item_name}</span>
                   <span className="text-gray-400 ml-2 text-xs">{Number(s.quantity).toLocaleString()} units</span>
                 </div>
-                <span className="text-blue-700 font-semibold">{"â‚¦"}{Number(s.total_cost).toLocaleString('en-NG')}</span>
+                <span className="text-blue-700 font-semibold">{"₦"}{Number(s.total_cost).toLocaleString('en-NG')}</span>
               </div>
             ))}
             <div className="flex justify-between text-sm pt-1 font-bold">
               <span className="text-blue-800">Total Spent</span>
-              <span className="text-blue-800">{"â‚¦"}{totalStockCost.toLocaleString('en-NG')}</span>
+              <span className="text-blue-800">{"₦"}{totalStockCost.toLocaleString('en-NG')}</span>
             </div>
           </div>
         </div>
