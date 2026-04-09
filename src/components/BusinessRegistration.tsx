@@ -29,10 +29,7 @@ export default function BusinessRegistration({ userId, email, onComplete }: Prop
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .insert({
-          name: businessName,
-          plan: 'free',
-          monthly_sales_limit: 50,
-          created_by: userId
+          name: businessName
         })
         .select()
         .single()
