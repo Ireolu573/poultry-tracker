@@ -5,6 +5,7 @@ import DomainController from './components/DomainController'
 import type { User } from '@supabase/supabase-js'
 import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
+import { monitorWebVitals } from './lib/performance'
 
 const SaleForm      = lazy(() => import('./components/SaleForm'))
 const SalesTable    = lazy(() => import('./components/SalesTable'))
@@ -65,6 +66,11 @@ export default function App() {
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline) }
+  }, [])
+
+  useEffect(() => {
+    // Initialize performance monitoring
+    monitorWebVitals()
   }, [])
 
   useEffect(() => {
