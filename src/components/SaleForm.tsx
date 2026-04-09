@@ -119,8 +119,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Product */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-            <select value={productId} onChange={e => handleProductSelect(e.target.value)} required
+            <label htmlFor="product-select" className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+            <select id="product-select" value={productId} onChange={e => handleProductSelect(e.target.value)} required aria-required="true"
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option value="">Select a product...</option>
               {products.map(p => (
@@ -156,21 +156,21 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
           {selectedUnit && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="quantity-input" className="block text-sm font-medium text-gray-700 mb-1">
                   Quantity <span className="text-amber-500">({selectedUnit.unit_label}s)</span>
                 </label>
-                <input type="number" min="0" step="any" value={quantity}
-                  onChange={e => setQuantity(e.target.value)} required placeholder="0"
+                <input id="quantity-input" type="number" min="0" step="any" value={quantity}
+                  onChange={e => setQuantity(e.target.value)} required placeholder="0" aria-required="true"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="price-input" className="block text-sm font-medium text-gray-700 mb-1">
                   Unit Price (₦) {priceEdited && <span className="text-xs text-orange-400">· edited</span>}
                 </label>
-                <input type="number" min="0" step="any" value={unitPrice}
+                <input id="price-input" type="number" min="0" step="any" value={unitPrice}
                   onChange={e => { setUnitPrice(e.target.value); setPriceEdited(true) }}
-                  required placeholder="0.00"
+                  required placeholder="0.00" aria-required="true"
                   className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${priceEdited ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}
                 />
                 {priceEdited && (
@@ -188,8 +188,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
           {selectedUnit && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} required
+                <label htmlFor="sale-date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input id="sale-date" type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} required aria-required="true"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
               </div>
@@ -205,28 +205,32 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
           {/* Payment Method */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-              <div className="flex gap-2">
-                {paymentOptions.map(opt => (
-                  <button key={opt.value} type="button" onClick={() => setPaymentMethod(opt.value)}
-                    className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
-                      paymentMethod === opt.value ? 'border-transparent text-white ' + opt.color : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">Payment Method</legend>
+                <div className="flex gap-2">
+                  {paymentOptions.map(opt => (
+                    <button key={opt.value} type="button" onClick={() => setPaymentMethod(opt.value)}
+                      aria-pressed={paymentMethod === opt.value}
+                      aria-label={`Pay by ${opt.label}`}
+                      className={`flex-1 py-2 text-sm font-medium rounded-lg border transition-all ${
+                        paymentMethod === opt.value ? 'border-transparent text-white ' + opt.color : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             </div>
           )}
 
           {/* Customer Name */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-1">
                 Customer Name {paymentMethod === 'credit' ? <span className="text-red-400">*</span> : <span className="text-gray-400">(optional)</span>}
               </label>
-              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                required={paymentMethod === 'credit'} placeholder="e.g. Mr. Emeka"
+              <input id="customer-name" type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
+                required={paymentMethod === 'credit'} placeholder="e.g. Mr. Emeka" aria-required={paymentMethod === 'credit'}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
@@ -235,8 +239,8 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
           {/* Notes */}
           {selectedUnit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-              <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
+              <label htmlFor="notes-input" className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <input id="notes-input" type="text" value={notes} onChange={e => setNotes(e.target.value)}
                 placeholder="Any extra info..."
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
@@ -251,6 +255,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
 
           {selectedUnit && (
             <button type="submit" disabled={loading}
+              aria-busy={loading}
               className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
               {loading ? 'Saving...' : 'Save Sale'}
             </button>
