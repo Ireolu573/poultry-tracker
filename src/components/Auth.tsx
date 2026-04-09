@@ -48,11 +48,15 @@ export default function Auth({ company }: Props) {
 
   const handleGoogle = async () => {
     setGoogleLoading(true)
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin }
     })
-    setGoogleLoading(false)
+    if (error) {
+      setError(error.message)
+      setGoogleLoading(false)
+    }
+    // Note: The redirect will handle the auth state change
   }
 
   if (showBusinessRegistration && newUserData) {

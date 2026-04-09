@@ -105,7 +105,39 @@ export default function App() {
         .eq('id', userId)
         .single()
 
-      if (profileError) throw profileError
+      if (profileError) {
+        // If profile doesn't exist (e.g., new Google user), create it
+        if (profileError.code === 'PGRST116') {
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData.user) {
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                email: userData.user.email,
+                is_admin: false,
+                permissions: DEFAULT_PERMS
+              })
+            if (createError) throw createError
+            // Now fetch the newly created profile
+            const { data: newProfileData } = await supabase
+              .from('profiles')
+              .select('id, is_admin, permissions, tenant_id, email')
+              .eq('id', userId)
+              .single()
+            if (newProfileData) {
+              setTenantId(newProfileData.tenant_id)
+              setIsAdmin(false)
+              setPermissions(DEFAULT_PERMS)
+              // New user without tenant_id - show business registration
+              setShowBusinessRegistration(true)
+              setLoading(false)
+              return
+            }
+          }
+        }
+        throw profileError
+      }
       
       const admin = profileData?.is_admin ?? false
       const tID = profileData?.tenant_id
