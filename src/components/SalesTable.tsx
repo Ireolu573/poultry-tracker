@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getSalesForUser } from '../lib/tenant-queries'
 import { Trash2, ClipboardList, Search, X } from 'lucide-react'
 
 interface Sale {
@@ -19,6 +20,7 @@ interface Sale {
 
 interface Props {
   userId: string
+  tenantId: string
   isAdmin: boolean
   refreshKey: number
   onDelete: () => void
@@ -32,7 +34,7 @@ const paymentBadge = (method: string, paidVia?: string | null) => {
   return <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">Cash</span>
 }
 
-export default function SalesTable({ userId, isAdmin, refreshKey, onDelete }: Props) {
+export default function SalesTable({ userId, tenantId, isAdmin, refreshKey, onDelete }: Props) {
   const [sales, setSales] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,19 +45,11 @@ export default function SalesTable({ userId, isAdmin, refreshKey, onDelete }: Pr
 
   useEffect(() => {
     setLoading(true)
-    let query = supabase
-      .from('sales')
-      .select('*')
-      .order('sale_date', { ascending: false })
-      .limit(300)
-
-    if (!isAdmin) query = query.eq('user_id', userId)
-
-    query.then(({ data }) => {
+    getSalesForUser(userId, tenantId).then(({ data }) => {
       if (data) setSales(data)
       setLoading(false)
     })
-  }, [userId, isAdmin, refreshKey])
+  }, [userId, tenantId, refreshKey])
 
   const filtered = sales.filter(s => {
     const q = search.toLowerCase()

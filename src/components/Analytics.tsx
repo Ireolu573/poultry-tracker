@@ -31,6 +31,7 @@ interface StockRecord {
 
 interface Props {
   userId: string
+  tenantId: string
   isAdmin: boolean
   refreshKey: number
 }
@@ -42,7 +43,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   credit: '#f97316',
 }
 
-export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
+export default function Analytics({ userId, tenantId, isAdmin, refreshKey }: Props) {
   const [sales, setSales] = useState<Sale[]>([])
   const [stockRecords, setStockRecords] = useState<StockRecord[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
@@ -54,20 +55,20 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    // Admins see ALL sales/stock; staff only see their own
+    // Admins see ALL sales/stock for tenant; staff only see their own
     const salesQuery = isAdmin
-      ? supabase.from('sales').select('*').order('sale_date', { ascending: false })
-      : supabase.from('sales').select('*').eq('user_id', userId).order('sale_date', { ascending: false })
+      ? supabase.from('sales').select('*').eq('tenant_id', tenantId).order('sale_date', { ascending: false })
+      : supabase.from('sales').select('*').eq('user_id', userId).eq('tenant_id', tenantId).order('sale_date', { ascending: false })
     const stockQuery = isAdmin
-      ? supabase.from('stock_records').select('*').order('stock_date', { ascending: false })
-      : supabase.from('stock_records').select('*').eq('user_id', userId).order('stock_date', { ascending: false })
+      ? supabase.from('stock_records').select('*').eq('tenant_id', tenantId).order('stock_date', { ascending: false })
+      : supabase.from('stock_records').select('*').eq('user_id', userId).eq('tenant_id', tenantId).order('stock_date', { ascending: false })
 
     Promise.all([salesQuery, stockQuery]).then(([salesRes, stockRes]) => {
       if (salesRes.data) setSales(salesRes.data)
       if (stockRes.data) setStockRecords(stockRes.data)
       setLoading(false)
     })
-  }, [userId, isAdmin, refreshKey])
+  }, [userId, tenantId, isAdmin, refreshKey])
 
   const inRange = (dateStr: string) => {
     if (filterMode === 'month') {

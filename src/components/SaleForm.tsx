@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getProductsForTenant, insertSale } from '../lib/tenant-queries'
 import { PlusCircle } from 'lucide-react'
 
 interface ProductUnit {
@@ -16,12 +17,13 @@ interface Product {
 
 interface Props {
   userId: string
+  tenantId: string
   onSaleAdded: () => void
 }
 
 type PaymentMethod = 'cash' | 'transfer' | 'credit' | 'pos'
 
-export default function SaleForm({ userId, onSaleAdded }: Props) {
+export default function SaleForm({ userId, tenantId, onSaleAdded }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [productId, setProductId] = useState('')
   const [selectedUnit, setSelectedUnit] = useState<ProductUnit | null>(null)
@@ -36,13 +38,10 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
   const [priceEdited, setPriceEdited] = useState(false)
 
   useEffect(() => {
-    supabase
-      .from('products')
-      .select('id, name, product_units(id, unit_label, unit_price)')
-      .eq('is_active', true)
-      .order('name')
-      .then(({ data }) => { if (data) setProducts(data as Product[]) })
-  }, [])
+    getProductsForTenant(tenantId).then(({ data }) => {
+      if (data) setProducts(data)
+    })
+  }, [tenantId])
 
   const total = Number(quantity) * Number(unitPrice) || 0
   const selectedProduct = products.find(p => p.id === productId)
@@ -67,8 +66,7 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
     if (!selectedProduct || !selectedUnit) return
     setLoading(true)
 
-    const { error } = await supabase.from('sales').insert({
-      user_id: userId,
+    const saleData = {
       product_id: productId,
       item_name: selectedProduct.name,
       unit_label: selectedUnit.unit_label,
@@ -78,7 +76,9 @@ export default function SaleForm({ userId, onSaleAdded }: Props) {
       payment_method: paymentMethod,
       customer_name: customerName || null,
       notes: notes || null,
-    })
+    }
+
+    const { error } = await insertSale(saleData, tenantId, userId)
 
     setLoading(false)
     if (!error) {

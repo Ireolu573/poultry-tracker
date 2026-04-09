@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import DomainController from './components/DomainController'
+import BusinessRegistration from './components/BusinessRegistration'
 import type { User } from '@supabase/supabase-js'
 import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
@@ -59,6 +60,8 @@ export default function App() {
   const [permissions, setPermissions] = useState<Permissions>(DEFAULT_PERMS)
   const [company, setCompany]       = useState<CompanySettings>(DEFAULT_COMPANY)
   const [online, setOnline]         = useState(navigator.onLine)
+  const [tenantId, setTenantId]     = useState<string | null>(null)
+  const [showBusinessRegistration, setShowBusinessRegistration] = useState(false)
 
   useEffect(() => {
     const onOnline  = () => setOnline(true)
@@ -94,19 +97,52 @@ export default function App() {
   }, [company.brand_color])
 
   const fetchProfile = async (userId: string) => {
-    const [profileRes, companyRes] = await Promise.all([
-      supabase.from('profiles').select('is_admin, permissions').eq('id', userId).maybeSingle(),
-      supabase.from('company_settings').select('*').limit(1).maybeSingle(),
-    ])
-    const admin = profileRes.data?.is_admin ?? false
-    setIsAdmin(admin)
-    if (admin) {
-      setPermissions(ADMIN_PERMS)
-    } else if (profileRes.data?.permissions) {
-      setPermissions(profileRes.data.permissions as Permissions)
+    try {
+      // Fetch profile with tenant_id
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, is_admin, permissions, tenant_id, email')
+        .eq('id', userId)
+        .single()
+
+      if (profileError) throw profileError
+      
+      const admin = profileData?.is_admin ?? false
+      const tID = profileData?.tenant_id
+
+      setTenantId(tID)
+      setIsAdmin(admin)
+      
+      if (admin) {
+        setPermissions(ADMIN_PERMS)
+      } else if (profileData?.permissions) {
+        setPermissions(profileData.permissions as Permissions)
+      }
+
+      // If user doesn't have a tenant_id, they need to complete business registration
+      if (!tID) {
+        setShowBusinessRegistration(true)
+      }
+
+      // Fetch company settings
+      const { data: companyData } = await supabase
+        .from('company_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle()
+
+      if (companyData) setCompany(companyData)
+    } catch (err) {
+      console.error('Error fetching profile:', err)
+    } finally {
+      setLoading(false)
     }
-    if (companyRes.data) setCompany(companyRes.data)
-    setLoading(false)
+  }
+
+  const handleBusinessRegistrationComplete = () => {
+    setShowBusinessRegistration(false)
+    // Refetch profile to get the new tenant_id
+    if (user) fetchProfile(user.id)
   }
 
   const switchTab = (newTab: Tab) => {
@@ -127,6 +163,14 @@ export default function App() {
   }
 
   if (!user) return <Auth company={company} />
+
+  if (showBusinessRegistration) {
+    return <BusinessRegistration
+      userId={user.id}
+      email={user.email || ''}
+      onComplete={handleBusinessRegistrationComplete}
+    />
+  }
 
   const visibleTabs = NAV_TABS.filter(t => permissions[t.perm as keyof Permissions])
 
@@ -166,11 +210,11 @@ export default function App() {
                 style={{ borderTopColor: company.brand_color }} />
             </div>
           }>
-            {tab === 'record'    && permissions.can_record_sales   && <SaleForm userId={user.id} onSaleAdded={() => setRefreshKey(k => k + 1)} />}
-            {tab === 'history'   && permissions.can_view_history   && <SalesTable userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />}
-            {tab === 'stock'     && (permissions.can_view_stock || permissions.can_add_stock) && <StockForm userId={user.id} isAdmin={isAdmin || permissions.can_add_stock} />}
-            {tab === 'analytics' && permissions.can_view_analytics && <Analytics userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} />}
-            {tab === 'credit'    && permissions.can_manage_credit  && <CreditManager isAdmin={isAdmin} userId={user.id} />}
+            {tab === 'record'    && permissions.can_record_sales   && tenantId && <SaleForm userId={user.id} tenantId={tenantId} onSaleAdded={() => setRefreshKey(k => k + 1)} />}
+            {tab === 'history'   && permissions.can_view_history   && tenantId && <SalesTable userId={user.id} tenantId={tenantId} isAdmin={isAdmin} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />}
+            {tab === 'stock'     && (permissions.can_view_stock || permissions.can_add_stock) && tenantId && <StockForm userId={user.id} tenantId={tenantId} isAdmin={isAdmin || permissions.can_add_stock} />}
+            {tab === 'analytics' && permissions.can_view_analytics && tenantId && <Analytics userId={user.id} tenantId={tenantId} isAdmin={isAdmin} refreshKey={refreshKey} />}
+            {tab === 'credit'    && permissions.can_manage_credit && tenantId && <CreditManager isAdmin={isAdmin} userId={user.id} tenantId={tenantId} />}
           </Suspense>
         </div>
       </main>

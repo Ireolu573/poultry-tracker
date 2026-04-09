@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getCreditSalesForTenant, getSalesForUser } from '../lib/tenant-queries'
 import { CreditCard } from 'lucide-react'
 
 interface Sale {
@@ -19,32 +20,26 @@ interface Sale {
 interface Props {
   isAdmin: boolean
   userId: string
+  tenantId: string
 }
 
-export default function CreditManager({ isAdmin, userId }: Props) {
+export default function CreditManager({ isAdmin, userId, tenantId }: Props) {
   const [credits, setCredits] = useState<Sale[]>([])
   const [loading, setLoading] = useState(true)
   const [settlingId, setSettlingId] = useState<string | null>(null)
 
   const fetchCredits = async () => {
     setLoading(true)
-    let query = supabase
-      .from('sales')
-      .select('*')
-      .eq('payment_method', 'credit')
-      .is('paid_at', null)
-      .order('sale_date', { ascending: false })
-
-    if (!isAdmin) {
-      query = query.eq('user_id', userId)
-    }
-
-    const { data } = await query
+    const { data } = isAdmin
+      ? await getCreditSalesForTenant(tenantId)
+      : await getSalesForUser(userId, tenantId).then(({ data }) => ({
+          data: data?.filter(s => s.payment_method === 'credit' && !s.paid_at) || []
+        }))
     if (data) setCredits(data)
     setLoading(false)
   }
 
-  useEffect(() => { fetchCredits() }, [])
+  useEffect(() => { fetchCredits() }, [tenantId, isAdmin])
 
   const markAsPaid = async (id: string, method: 'cash' | 'transfer') => {
     setSettlingId(id)

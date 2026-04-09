@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import BusinessRegistration from './BusinessRegistration'
 
 interface CompanySettings { company_name: string; app_name: string; brand_color: string; logo_emoji: string }
 interface Props { company: CompanySettings }
@@ -12,6 +13,8 @@ export default function Auth({ company }: Props) {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [showBusinessRegistration, setShowBusinessRegistration] = useState(false)
+  const [newUserData, setNewUserData] = useState<{ id: string; email: string } | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -21,11 +24,21 @@ export default function Auth({ company }: Props) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setError(error.message)
     } else {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) setError(error.message)
-      else setMessage('Account created! Set up your business on the next screen.')
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        setError(error.message)
+      } else if (data.user) {
+        setNewUserData({ id: data.user.id, email: data.user.email || email })
+        setShowBusinessRegistration(true)
+      }
     }
     setLoading(false)
+  }
+
+  const handleBusinessRegistrationComplete = () => {
+    setShowBusinessRegistration(false)
+    setNewUserData(null)
+    // The auth state change will automatically redirect to the main app
   }
 
   const handleGoogle = async () => {
@@ -35,6 +48,14 @@ export default function Auth({ company }: Props) {
       options: { redirectTo: window.location.origin }
     })
     setGoogleLoading(false)
+  }
+
+  if (showBusinessRegistration && newUserData) {
+    return <BusinessRegistration
+      userId={newUserData.id}
+      email={newUserData.email}
+      onComplete={handleBusinessRegistrationComplete}
+    />
   }
 
   return (
@@ -83,7 +104,7 @@ export default function Auth({ company }: Props) {
               aria-pressed={mode === 'signup'}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === 'signup' ? 'text-white shadow-sm' : 'text-gray-600'}`}
               style={mode === 'signup' ? { backgroundColor: company.brand_color } : {}}>
-              New Business
+              Sign Up
             </button>
           </div>
 
@@ -121,7 +142,6 @@ export default function Auth({ company }: Props) {
             </div>
 
             {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2 font-medium" role="alert">{error}</div>}
-            {message && <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-3 py-2 font-medium" role="status">{message}</div>}
 
             <button 
               type="submit" 
@@ -132,12 +152,6 @@ export default function Auth({ company }: Props) {
               {loading ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Create Account'}
             </button>
           </form>
-
-          {mode === 'signup' && (
-            <p className="text-xs text-gray-400 text-center">
-              After signing up, you'll set up your business profile
-            </p>
-          )}
         </div>
       </div>
     </div>

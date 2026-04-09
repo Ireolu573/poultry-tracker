@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { getProductsForTenant, getStockRecordsForUser, insertStockRecord } from '../lib/tenant-queries'
 import { PackagePlus } from 'lucide-react'
 
 interface ProductUnit {
@@ -25,10 +26,11 @@ interface StockRecord {
 
 interface Props {
   userId: string
+  tenantId: string
   isAdmin: boolean
 }
 
-export default function StockForm({ userId, isAdmin }: Props) {
+export default function StockForm({ userId, tenantId, isAdmin }: Props) {
   const [products, setProducts] = useState<Product[]>([])
   const [records, setRecords] = useState<StockRecord[]>([])
   const [productId, setProductId] = useState('')
@@ -41,20 +43,13 @@ export default function StockForm({ userId, isAdmin }: Props) {
   const [success, setSuccess] = useState(false)
 
   const fetchRecords = () => {
-    supabase
-      .from('stock_records')
-      .select('*')
-      .eq('user_id', userId)
-      .order('stock_date', { ascending: false })
-      .limit(30)
-      .then(({ data }) => { if (data) setRecords(data) })
+    getStockRecordsForUser(userId, tenantId).then(({ data }) => { if (data) setRecords(data) })
   }
 
   useEffect(() => {
-    supabase.from('products').select('id, name, product_units(id, unit_label)').eq('is_active', true).order('name')
-      .then(({ data }) => { if (data) setProducts(data as Product[]) })
+    getProductsForTenant(tenantId).then(({ data }) => { if (data) setProducts(data) })
     fetchRecords()
-  }, [])
+  }, [tenantId])
 
   const selectedProduct = products.find(p => p.id === productId)
 
@@ -66,17 +61,16 @@ export default function StockForm({ userId, isAdmin }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedProduct || !selectedUnitLabel) return
-    setLoading(true)
-
-    const { error } = await supabase.from('stock_records').insert({
-      user_id: userId,
+    const recordData = {
       product_id: productId,
-      item_name: selectedProduct.name,
+      item_name: selectedProduct!.name,
       quantity: Number(quantity),
       cost_price: Number(costPrice),
       stock_date: stockDate,
       notes: notes || null,
-    })
+    }
+
+    const { error } = await insertStockRecord(recordData, tenantId, userId)
 
     setLoading(false)
     if (!error) {
