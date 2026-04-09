@@ -2,11 +2,8 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import DomainController from './components/DomainController'
-import BusinessRegistration from './components/BusinessRegistration'
 import type { User } from '@supabase/supabase-js'
 import { Settings, Wifi, WifiOff, LogOut } from 'lucide-react'
-import { SpeedInsights } from '@vercel/speed-insights/react'
-import { monitorWebVitals } from './lib/performance'
 
 const SaleForm      = lazy(() => import('./components/SaleForm'))
 const SalesTable    = lazy(() => import('./components/SalesTable'))
@@ -38,15 +35,15 @@ const ADMIN_PERMS: Permissions = {
 
 const DEFAULT_COMPANY: CompanySettings = {
   admin_id: '', company_name: 'My Business',
-  app_name: 'Sales Manager', brand_color: '#d97706', logo_emoji: '\u{1F3E2}',
+  app_name: 'Sales Manager', brand_color: '#d97706', logo_emoji: 'ðŸ¢',
 }
 
 const NAV_TABS = [
-  { id: 'record'    as Tab, label: 'Record',    icon: '\u{1F4DD}', perm: 'can_record_sales' },
-  { id: 'history'   as Tab, label: 'History',   icon: '\u{1F5C2}\uFE0F', perm: 'can_view_history' },
-  { id: 'stock'     as Tab, label: 'Stock',     icon: '\u{1F4E6}', perm: 'can_view_stock' },
-  { id: 'analytics' as Tab, label: 'Analytics', icon: '\u{1F4CA}', perm: 'can_view_analytics' },
-  { id: 'credit'    as Tab, label: 'Credit',    icon: '\u{1F4CB}', perm: 'can_manage_credit' },
+  { id: 'record'    as Tab, label: 'Record',    icon: 'ðŸ“', perm: 'can_record_sales' },
+  { id: 'history'   as Tab, label: 'History',   icon: 'ðŸ—‚ï¸', perm: 'can_view_history' },
+  { id: 'stock'     as Tab, label: 'Stock',     icon: 'ðŸ“¦', perm: 'can_view_stock' },
+  { id: 'analytics' as Tab, label: 'Analytics', icon: 'ðŸ“Š', perm: 'can_view_analytics' },
+  { id: 'credit'    as Tab, label: 'Credit',    icon: 'ðŸ“‹', perm: 'can_manage_credit' },
 ]
 
 export default function App() {
@@ -60,8 +57,6 @@ export default function App() {
   const [permissions, setPermissions] = useState<Permissions>(DEFAULT_PERMS)
   const [company, setCompany]       = useState<CompanySettings>(DEFAULT_COMPANY)
   const [online, setOnline]         = useState(navigator.onLine)
-  const [tenantId, setTenantId]     = useState<string | null>(null)
-  const [showBusinessRegistration, setShowBusinessRegistration] = useState(false)
 
   useEffect(() => {
     const onOnline  = () => setOnline(true)
@@ -69,11 +64,6 @@ export default function App() {
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
     return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline) }
-  }, [])
-
-  useEffect(() => {
-    // Initialize performance monitoring
-    monitorWebVitals()
   }, [])
 
   useEffect(() => {
@@ -97,84 +87,19 @@ export default function App() {
   }, [company.brand_color])
 
   const fetchProfile = async (userId: string) => {
-    try {
-      // Fetch profile with tenant_id
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, is_admin, permissions, tenant_id, email')
-        .eq('id', userId)
-        .single()
-
-      if (profileError) {
-        // If profile doesn't exist (e.g., new Google user), create it
-        if (profileError.code === 'PGRST116') {
-          const { data: userData } = await supabase.auth.getUser()
-          if (userData.user) {
-            const { error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                email: userData.user.email,
-                is_admin: false,
-                permissions: DEFAULT_PERMS
-              })
-            if (createError) throw createError
-            // Now fetch the newly created profile
-            const { data: newProfileData } = await supabase
-              .from('profiles')
-              .select('id, is_admin, permissions, tenant_id, email')
-              .eq('id', userId)
-              .single()
-            if (newProfileData) {
-              setTenantId(newProfileData.tenant_id)
-              setIsAdmin(false)
-              setPermissions(DEFAULT_PERMS)
-              // New user without tenant_id - show business registration
-              setShowBusinessRegistration(true)
-              setLoading(false)
-              return
-            }
-          }
-        }
-        throw profileError
-      }
-      
-      const admin = profileData?.is_admin ?? false
-      const tID = profileData?.tenant_id
-
-      setTenantId(tID)
-      setIsAdmin(admin)
-      
-      if (admin) {
-        setPermissions(ADMIN_PERMS)
-      } else if (profileData?.permissions) {
-        setPermissions(profileData.permissions as Permissions)
-      }
-
-      // If user doesn't have a tenant_id, they need to complete business registration
-      if (!tID) {
-        setShowBusinessRegistration(true)
-      }
-
-      // Fetch company settings
-      const { data: companyData } = await supabase
-        .from('company_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle()
-
-      if (companyData) setCompany(companyData)
-    } catch (err) {
-      console.error('Error fetching profile:', err)
-    } finally {
-      setLoading(false)
+    const [profileRes, companyRes] = await Promise.all([
+      supabase.from('profiles').select('is_admin, permissions').eq('id', userId).maybeSingle(),
+      supabase.from('company_settings').select('*').limit(1).maybeSingle(),
+    ])
+    const admin = profileRes.data?.is_admin ?? false
+    setIsAdmin(admin)
+    if (admin) {
+      setPermissions(ADMIN_PERMS)
+    } else if (profileRes.data?.permissions) {
+      setPermissions(profileRes.data.permissions as Permissions)
     }
-  }
-
-  const handleBusinessRegistrationComplete = () => {
-    setShowBusinessRegistration(false)
-    // Refetch profile to get the new tenant_id
-    if (user) fetchProfile(user.id)
+    if (companyRes.data) setCompany(companyRes.data)
+    setLoading(false)
   }
 
   const switchTab = (newTab: Tab) => {
@@ -195,14 +120,6 @@ export default function App() {
   }
 
   if (!user) return <Auth company={company} />
-
-  if (showBusinessRegistration) {
-    return <BusinessRegistration
-      userId={user.id}
-      email={user.email || ''}
-      onComplete={handleBusinessRegistrationComplete}
-    />
-  }
 
   const visibleTabs = NAV_TABS.filter(t => permissions[t.perm as keyof Permissions])
 
@@ -242,11 +159,11 @@ export default function App() {
                 style={{ borderTopColor: company.brand_color }} />
             </div>
           }>
-            {tab === 'record'    && permissions.can_record_sales   && tenantId && <SaleForm userId={user.id} tenantId={tenantId} onSaleAdded={() => setRefreshKey(k => k + 1)} />}
-            {tab === 'history'   && permissions.can_view_history   && tenantId && <SalesTable userId={user.id} tenantId={tenantId} isAdmin={isAdmin} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />}
-            {tab === 'stock'     && (permissions.can_view_stock || permissions.can_add_stock) && tenantId && <StockForm userId={user.id} tenantId={tenantId} isAdmin={isAdmin || permissions.can_add_stock} />}
-            {tab === 'analytics' && permissions.can_view_analytics && tenantId && <Analytics userId={user.id} tenantId={tenantId} isAdmin={isAdmin} refreshKey={refreshKey} />}
-            {tab === 'credit'    && permissions.can_manage_credit && tenantId && <CreditManager isAdmin={isAdmin} userId={user.id} tenantId={tenantId} />}
+            {tab === 'record'    && permissions.can_record_sales   && <SaleForm userId={user.id} refreshKey={refreshKey} onSaleAdded={() => setRefreshKey(k => k + 1)} />}
+            {tab === 'history'   && permissions.can_view_history   && <SalesTable userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} onDelete={() => setRefreshKey(k => k + 1)} />}
+            {tab === 'stock'     && (permissions.can_view_stock || permissions.can_add_stock) && <StockForm userId={user.id} isAdmin={isAdmin || permissions.can_add_stock} />}
+            {tab === 'analytics' && permissions.can_view_analytics && <Analytics userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} />}
+            {tab === 'credit'    && permissions.can_manage_credit  && <CreditManager isAdmin={isAdmin} userId={user.id} />}
           </Suspense>
         </div>
       </main>
@@ -276,7 +193,6 @@ export default function App() {
           onProductsChanged={() => setRefreshKey(k => k + 1)}
         />
       )}
-      <SpeedInsights />
     </div>
   )
 }
