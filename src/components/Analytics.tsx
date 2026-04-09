@@ -177,11 +177,11 @@ export default function Analytics({ userId, isAdmin, refreshKey }: Props) {
             {/* Mode toggle */}
             <div className="flex bg-gray-100 rounded-lg p-0.5 w-fit">
               <button onClick={() => setFilterMode('month')}
-                className={\`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'month' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}\`}>
+                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'month' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}`}>
                 By month
               </button>
               <button onClick={() => setFilterMode('range')}
-                className={\`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'range' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}\`}>
+                className={`text-xs font-medium px-3 py-1.5 rounded-md transition-all \${filterMode === 'range' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-500'}`}>
                 Date range
               </button>
             </div>
