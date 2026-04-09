@@ -126,7 +126,7 @@ export default function App() {
           )}
           {tab === 'stock' && <StockForm userId={user.id} />}
           {tab === 'credit' && <CreditManager isAdmin={isAdmin} userId={user.id} />}
-          {tab === 'analytics' && <Analytics userId={user.id} refreshKey={refreshKey} />}
+          {tab === 'analytics' && <Analytics userId={user.id} isAdmin={isAdmin} refreshKey={refreshKey} />}
           {tab === 'admin' && isAdmin && <AdminPage />}
         </Suspense>
       </main>
