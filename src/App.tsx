@@ -35,15 +35,15 @@ const ADMIN_PERMS: Permissions = {
 
 const DEFAULT_COMPANY: CompanySettings = {
   admin_id: '', company_name: 'My Business',
-  app_name: 'Sales Manager', brand_color: '#d97706', logo_emoji: '≡ƒÅó',
+  app_name: 'Sales Manager', brand_color: '#d97706', logo_emoji: '\u{1F3E2}',
 }
 
 const NAV_TABS = [
-  { id: 'record'    as Tab, label: 'Record',    icon: '≡ƒô¥', perm: 'can_record_sales' },
-  { id: 'history'   as Tab, label: 'History',   icon: '≡ƒùé∩╕Å', perm: 'can_view_history' },
-  { id: 'stock'     as Tab, label: 'Stock',     icon: '≡ƒôª', perm: 'can_view_stock' },
-  { id: 'analytics' as Tab, label: 'Analytics', icon: '≡ƒôè', perm: 'can_view_analytics' },
-  { id: 'credit'    as Tab, label: 'Credit',    icon: '≡ƒôï', perm: 'can_manage_credit' },
+  { id: 'record'    as Tab, label: 'Record',    icon: '\u{1F4DD}', perm: 'can_record_sales' },
+  { id: 'history'   as Tab, label: 'History',   icon: '\u{1F5C2}\uFE0F', perm: 'can_view_history' },
+  { id: 'stock'     as Tab, label: 'Stock',     icon: '\u{1F4E6}', perm: 'can_view_stock' },
+  { id: 'analytics' as Tab, label: 'Analytics', icon: '\u{1F4CA}', perm: 'can_view_analytics' },
+  { id: 'credit'    as Tab, label: 'Credit',    icon: '\u{1F4CB}', perm: 'can_manage_credit' },
 ]
 
 export default function App() {
