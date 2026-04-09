@@ -22,6 +22,23 @@ drop policy if exists "Users can view stock records" on stock_records;
 drop policy if exists "Users can insert stock records" on stock_records;
 drop policy if exists "Users can delete stock records" on stock_records;
 
+drop policy if exists "profiles_select_own" on profiles;
+drop policy if exists "profiles_insert_own" on profiles;
+drop policy if exists "tenants_insert_own" on tenants;
+drop policy if exists "products_select_any" on products;
+drop policy if exists "products_insert_admin" on products;
+drop policy if exists "products_update_admin" on products;
+drop policy if exists "products_delete_admin" on products;
+drop policy if exists "product_units_select_any" on product_units;
+drop policy if exists "product_units_admin_manage" on product_units;
+drop policy if exists "sales_select_own_or_admin" on sales;
+drop policy if exists "sales_insert_own" on sales;
+drop policy if exists "sales_update_own" on sales;
+drop policy if exists "sales_delete_own" on sales;
+drop policy if exists "stock_select_own_or_admin" on stock_records;
+drop policy if exists "stock_insert_own" on stock_records;
+drop policy if exists "stock_delete_own" on stock_records;
+
 select '✅ Old policies dropped' as status;
 
 
@@ -32,6 +49,15 @@ select '✅ Old policies dropped' as status;
 create policy "profiles_select_own"
   on profiles for select
   using (auth.uid() = id);
+
+create policy "profiles_insert_own"
+  on profiles for insert
+  with check (auth.uid() = id);
+
+-- TENANTS: allow authenticated users to create their own tenant record
+create policy "tenants_insert_own"
+  on tenants for insert
+  with check (created_by = auth.uid());
 
 
 -- PRODUCTS: Allow authenticated users to view all (tenant filtering in app)

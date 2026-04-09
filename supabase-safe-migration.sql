@@ -46,6 +46,10 @@ create policy "Users can view their own tenant"
     id in (select tenant_id from profiles where id = auth.uid())
   );
 
+create policy "Users can create their own tenant"
+  on tenants for insert
+  with check (created_by = auth.uid());
+
 create policy "Tenant admins can update their tenant"
   on tenants for update
   using (

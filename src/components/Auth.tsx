@@ -28,8 +28,13 @@ export default function Auth({ company }: Props) {
       if (error) {
         setError(error.message)
       } else if (data.user) {
-        setNewUserData({ id: data.user.id, email: data.user.email || email })
-        setShowBusinessRegistration(true)
+        if (data.session) {
+          setNewUserData({ id: data.user.id, email: data.user.email || email })
+          setShowBusinessRegistration(true)
+        } else {
+          setMessage('Account created! Please verify your email and then log in to finish business setup.')
+          setMode('login')
+        }
       }
     }
     setLoading(false)

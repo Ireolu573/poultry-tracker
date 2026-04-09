@@ -21,6 +21,10 @@ export default function BusinessRegistration({ userId, email, onComplete }: Prop
     setError('')
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.user) {
+        throw new Error('You must be signed in to complete business registration.')
+      }
       // Create tenant
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
